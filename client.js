@@ -1,27 +1,53 @@
-var express = require("express");
-var bodyParser = require('body-parser');
-var request = require("sync-request");
-var url = require("url");
-var qs = require("qs");
-var querystring = require('querystring');
-var cons = require('consolidate');
-var randomstring = require("randomstring");
-var jose = require('jsrsasign');
-var base64url = require('base64url');
-var __ = require('underscore');
-__.string = require('underscore.string');
+/* BEGINNING OF SKELETON */
 
+var express = require("express");
+var cons = require('consolidate');
 
 var app = express();
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
 app.engine('html', cons.underscore);
 app.set('view engine', 'html');
 app.set('views', 'files/client');
 
-// authorization server information
+var access_token = null;
+var refresh_token = null;
+var scope = null;
+
+app.get('/', function (req, res) {
+	res.render('index', {
+		access_token: access_token,
+		refresh_token: refresh_token,
+		scope: scope
+	});
+});
+
+app.use('/', express.static('files/client'));
+
+var server = app.listen(9000, 'localhost', function () {
+	var host = server.address().address;
+	var port = server.address().port;
+	console.log('OAuth Client is listening at http://%s:%s', host, port);
+});
+
+/* END OF SKELETON */
+
+var bodyParser = require('body-parser');
+var request = require("sync-request");
+var url = require("url");
+var qs = require("qs");
+var querystring = require('querystring');
+var randomstring = require("randomstring");
+var jsrsasign = require('jsrsasign');
+var base64url = require('base64url');
+var __ = require('underscore');
+__.string = require('underscore.string');
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
+	extended: true
+}));
+
+
 var authServer = {
 	authorizationEndpoint: 'http://localhost:9001/authorize',
 	tokenEndpoint: 'http://localhost:9001/token',
@@ -38,16 +64,12 @@ var rsaKey = {
   "kid": "authserver"
 };
 
-// client information
-
 var client = {
 	"client_id": "oauth-client-1",
 	"client_secret": "oauth-client-secret-1",
 	"redirect_uris": ["http://localhost:9000/callback"],
 	"scope": "foo bar"
 };
-
-//var client = {};
 
 var protectedResource = 'http://localhost:9002/resource';
 var wordApi = 'http://localhost:9002/words';
@@ -56,14 +78,7 @@ var favoritesApi = 'http://localhost:9002/favorites';
 
 var state = null;
 
-var access_token = null;
-var refresh_token = null;
-var scope = null;
 var id_token = null;
-
-app.get('/', function (req, res) {
-	res.render('index', {access_token: access_token, refresh_token: refresh_token, scope: scope});
-});
 
 app.get('/authorize', function(req, res){
 
@@ -177,8 +192,8 @@ app.get("/callback", function(req, res){
 			console.log('Got ID token: %s', body.id_token);
 			
 			// check the id token
-			var pubKey = jose.KEYUTIL.getKey(rsaKey);
-			var signatureValid = jose.jws.JWS.verify(body.id_token, pubKey, ['RS256']);
+			var pubKey = jsrsasign.KEYUTIL.getKey(rsaKey);
+			var signatureValid = jsrsasign.jws.JWS.verify(body.id_token, pubKey, ['RS256']);
 			if (signatureValid) {
 				console.log('Signature validated.');
 				var tokenParts = body.id_token.split('.');
@@ -512,7 +527,6 @@ app.post('/username_password', function(req, res) {
 	
 });
 
-app.use('/', express.static('files/client'));
 
 var buildUrl = function(base, options, hash) {
 	var newUrl = url.parse(base, true);
@@ -530,9 +544,4 @@ var buildUrl = function(base, options, hash) {
 	return url.format(newUrl);
 };
 
-var server = app.listen(9000, 'localhost', function () {
-  var host = server.address().address;
-  var port = server.address().port;
-  console.log('OAuth Client is listening at http://%s:%s', host, port);
-});
  

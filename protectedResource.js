@@ -1,15 +1,9 @@
+/* BEGINNING OF SKELETON */
+
 var express = require("express");
-var url = require("url");
-var bodyParser = require('body-parser');
-var randomstring = require("randomstring");
 var cons = require('consolidate');
-var nosql = require('nosql').load('database.nosql');
-var qs = require("qs");
-var querystring = require('querystring');
-var request = require("sync-request");
+var bodyParser = require('body-parser');
 var __ = require('underscore');
-var base64url = require('base64url');
-var jose = require('jsrsasign');
 var cors = require('cors');
 
 var app = express();
@@ -29,15 +23,18 @@ var resource = {
 	"description": "This data has been protected by OAuth 2.0"
 };
 
-var sharedTokenSecret = "shared token secret!";
+var server = app.listen(9002, 'localhost', function () {
+	var host = server.address().address;
+	var port = server.address().port;
 
-var rsaKey = {
-  "alg": "RS256",
-  "e": "AQAB",
-  "n": "p8eP5gL1H_H9UNzCuQS-vNRVz3NWxZTHYk1tG9VpkfFjWNKG3MFTNZJ1l5g_COMm2_2i_YhQNH8MJ_nQ4exKMXrWJB4tyVZohovUxfw-eLgu1XQ8oYcVYW8ym6Um-BkqwwWL6CXZ70X81YyIMrnsGTyTV6M8gBPun8g2L8KbDbXR1lDfOOWiZ2ss1CRLrmNM-GRp3Gj-ECG7_3Nx9n_s5to2ZtwJ1GS1maGjrSZ9GRAYLrHhndrL_8ie_9DS2T-ML7QNQtNkg2RvLv4f0dpjRYI23djxVtAylYK4oiT_uEMgSkc4dxwKwGuBxSO0g9JOobgfy0--FUHHYtRi0dOFZw",
-  "kty": "RSA",
-  "kid": "authserver"
-};
+	console.log('OAuth Resource Server is listening at http://%s:%s', host, port);
+});
+
+/* END OF SKELETON */
+
+var qs = require("qs");
+var querystring = require('querystring');
+var request = require("sync-request");
 
 var protectedResources = {
 		"resource_id": "protected-resource-1",
@@ -63,60 +60,7 @@ var getAccessToken = function(req, res, next) {
 	}
 	
 	console.log('Incoming token: %s', inToken);
-	/*
-	nosql.one(function(token) {
-		if (token.access_token == inToken) {
-			return token;	
-		}
-	}, function(err, token) {
-		if (token) {
-			console.log("We found a matching token: %s", inToken);
-		} else {
-			console.log('No matching token was found.');
-		}
-		req.access_token = token;
-		next();
-		return;
-	});
-	*/
-	/*
-	//var signatureValid = jose.jws.JWS.verify(inToken, new Buffer(sharedTokenSecret).toString('hex'), ['HS256']);
-	var pubKey = jose.KEYUTIL.getKey(rsaKey);
-	var signatureValid = jose.jws.JWS.verify(inToken, pubKey, ['RS256']);
-	if (signatureValid) {
-		console.log('Signature validated.');
-		var tokenParts = inToken.split('.');
-		var payload = JSON.parse(base64url.decode(tokenParts[1]));
-		console.log('Payload', payload);
-		if (payload.iss == 'http://localhost:9001/') {
-			console.log('issuer OK');
-			if ((Array.isArray(payload.aud) && _.contains(payload.aud, 'http://localhost:9002/')) || 
-				payload.aud == 'http://localhost:9002/') {
-				console.log('Audience OK');
-				
-				var now = Math.floor(Date.now() / 1000);
-				
-				if (payload.iat <= now) {
-					console.log('issued-at OK');
-					if (payload.exp >= now) {
-						console.log('expiration OK');
-						
-						console.log('Token valid!');
 		
-						req.access_token = payload;
-						
-					}
-				}
-			}
-			
-		}
-			
-
-	}
-	next();
-	return;
-	*/
-	
 	var form_data = qs.stringify({
 		token: inToken
 	});
@@ -237,11 +181,3 @@ app.post("/resource", cors(), getAccessToken, function(req, res){
 	}
 	
 });
-
-var server = app.listen(9002, 'localhost', function () {
-  var host = server.address().address;
-  var port = server.address().port;
-
-  console.log('OAuth Resource Server is listening at http://%s:%s', host, port);
-});
- 
