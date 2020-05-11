@@ -207,13 +207,13 @@ app.get('/fetch_resource', function(req, res) {
 
 app.post('/revoke', function(req, res) {
 	var form_data = qs.stringify({
-		token: access_token
+		token: refresh_token
 	});
 	var headers = {
 		'Content-Type': 'application/x-www-form-urlencoded',
 		'Authorization': 'Basic ' + encodeClientCredentials(client.client_id, client.client_secret)
 	};
-	console.log('Revoking token %s', access_token);
+	console.log('Revoking token %s', refresh_token);
 	var tokRes = request('POST', authServer.revocationEndpoint, {
 		body: form_data,
 		headers: headers

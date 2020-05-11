@@ -286,14 +286,9 @@ app.post('/revoke', function(req, res) {
 		res.status(401).json({error: 'invalid_client'});
 		return;
 	}
-	
-	var inToken = req.body.token;
-	nosql.remove(function(token) {
-		if (token.access_token == inToken && token.client_id == clientId) {
-			return true;	
-		}
-	}, function(err, count) {
-		console.log("Removed %s tokens", count);
+
+	nedb.remove( {$and: [{client_id: clientId}] }, {multi:true}, function(err, numRemoved) {
+		console.log("Removed %s tokens", numRemoved);
 		res.status(204).end();
 		return;
 	});
