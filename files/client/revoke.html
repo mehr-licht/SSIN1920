@@ -29,7 +29,7 @@
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
         <div class="navbar-header">
-          <a class="navbar-brand" href="/">OAuth in Action: <span class="label label-primary">OAuth Client</label></a>
+          <a class="navbar-brand" href="/">OAuth in Action: <span class="label label-primary">OAuth Client</span></a>
         </div>
       </div>
     </nav>
@@ -42,6 +42,7 @@
 		  <p>Refresh token value: <span class="label label-danger"><%- refresh_token ? refresh_token : 'NONE' %></span></p>
 		  <form action="/revoke" class="form" method="POST">
 		  <a class="btn btn-default" href="/authorize">Get OAuth Token</a> 
+		  <a class="btn btn-default" href="/fetch_resource">Get Protected Resource</a> 
 		  <input type="submit" class="btn btn-default" value="Revoke OAuth Token" />
 	  	  </form>
       </div>
