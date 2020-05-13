@@ -1,3 +1,5 @@
+/*----------------------------------- begin of skeleton -----------------------------------*/
+
 var express = require("express");
 var cons = require('consolidate');
 
@@ -23,3 +25,4 @@ var server = app.listen(9000, 'localhost', function () {
   console.log('OAuth Client is listening at http://%s:%s', host, port);
 });
  
+/*----------------------------------- end of skeleton -----------------------------------*/

@@ -1,3 +1,5 @@
+/*----------------------------------- begin of skeleton -----------------------------------*/
+
 var express = require("express");
 var bodyParser = require('body-parser');
 var cons = require('consolidate');
@@ -47,3 +49,4 @@ var server = app.listen(9001, 'localhost', function () {
   console.log('OAuth Authorization Server is listening at http://%s:%s', host, port);
 });
  
+/*----------------------------------- end of skeleton -----------------------------------*/
