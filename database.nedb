@@ -1,0 +1,2 @@
+{"access_token":"UY2BkYtpmbMRszlDtjtuMAnZCTVfRySe","client_id":"oauth-client-1","scope":["movies"],"user":"bob","_id":"v1ZnIe0CHC4H1Xq7"}
+{"refresh_token":"qj4dWFZarjnku5FnM6WFjkrr7JSZYzvd","client_id":"oauth-client-1","scope":["movies"],"user":{"sub":"1ZT5-OE63-57383B","preferred_username":"bob","name":"Bob","email":"bob.loblob@example.net","email_verified":false},"_id":"lBuEwQIkqAXN2Z8J"}
