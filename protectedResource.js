@@ -1,4 +1,4 @@
-/* BEGINNING OF SKELETON */
+/*----------------------------------- begin of skeleton -----------------------------------*/
 
 var express = require("express");
 var cons = require('consolidate');
@@ -181,3 +181,5 @@ app.post("/resource", cors(), getAccessToken, function(req, res){
 	}
 	
 });
+ 
+/*----------------------------------- end of skeleton -----------------------------------*/

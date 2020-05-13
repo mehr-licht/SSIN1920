@@ -1,4 +1,4 @@
-/* BEGINNING OF SKELETON */
+/*----------------------------------- begin of skeleton -----------------------------------*/
 
 var express = require("express");
 var cons = require('consolidate');
@@ -545,3 +545,4 @@ var buildUrl = function(base, options, hash) {
 };
 
  
+/*----------------------------------- end of skeleton -----------------------------------*/
