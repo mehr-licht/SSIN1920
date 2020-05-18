@@ -24,10 +24,11 @@ app.set('json spaces', 4);
  */
 users_db.count({}, function (err, count) {
 	if (!count) {
-		users_db.insert([{username: 'alice', password: 'password'}, {
-			username: 'bob',
-			password: 'my_secret_password'
-		}], function (err, docs) {
+		users_db.insert(
+		[
+				{username: 'alice', password: 'password', scope: 'read write delete'},
+				{username: 'bob', password: 'my_secret_password', scope: 'read'}
+			], function (err, docs) {
 		});
 	}
 });
@@ -59,10 +60,6 @@ var protectedResources = [
 ];
 
 
-var codes = {};
-
-var requests = {};
-
 var getClient = function(clientId) {
 	return __.find(clients, function(client) { return client.client_id == clientId; });
 };
@@ -73,98 +70,6 @@ var getProtectedResource = function(resourceId) {
 
 app.get('/', function(req, res) {
 	res.render('index', {clients: clients, authServer: authServer});
-});
-
-app.get("/authorize", function(req, res){
-	
-	var client = getClient(req.query.client_id);
-	
-	if (!client) {
-		console.log('Unknown client %s', req.query.client_id);
-		res.render('error', {error: 'Unknown client'});
-		return;
-	} else if (!__.contains(client.redirect_uris, req.query.redirect_uri)) {
-		console.log('Mismatched redirect URI, expected %s got %s', client.redirect_uris, req.query.redirect_uri);
-		res.render('error', {error: 'Invalid redirect URI'});
-		return;
-	} else {
-		
-		var rscope = req.query.scope ? req.query.scope.split(' ') : undefined;
-		var cscope = client.scope ? client.scope.split(' ') : undefined;
-		if (__.difference(rscope, cscope).length > 0) {
-			var urlParsed = buildUrl(req.query.redirect_uri, {
-				error: 'invalid_scope'
-			});
-			res.redirect(urlParsed);
-			return;
-		}
-		
-		var reqid = randomstring.generate(8);
-		
-		requests[reqid] = req.query;
-		
-		res.render('approve', {client: client, reqid: reqid, scope: rscope});
-		return;
-	}
-
-});
-
-app.post('/approve', function(req, res) {
-
-	var reqid = req.body.reqid;
-	var query = requests[reqid];
-	delete requests[reqid];
-
-	if (!query) {
-		// there was no matching saved request, this is an error
-		res.render('error', {error: 'No matching authorization request'});
-		return;
-	}
-	
-	if (req.body.approve) {
-		if (query.response_type == 'code') {
-			// user approved access
-
-			var rscope = getScopesFromForm(req.body);
-			var client = getClient(query.client_id);
-			var cscope = client.scope ? client.scope.split(' ') : undefined;
-			if (__.difference(rscope, cscope).length > 0) {
-				var urlParsed = buildUrl(query.redirect_uri, {
-					error: 'invalid_scope'
-				});
-				res.redirect(urlParsed);
-				return;
-			}
-
-			var code = randomstring.generate(8);
-			
-			// save the code and request for later
-			
-			codes[code] = { request: query, scope: rscope };
-		
-			var urlParsed = buildUrl(query.redirect_uri, {
-				code: code,
-				state: query.state
-			});
-			res.redirect(urlParsed);
-			return;
-		} else {
-			// we got a response type we don't understand
-			var urlParsed = buildUrl(query.redirect_uri, {
-				error: 'unsupported_response_type'
-			});
-			res.redirect(urlParsed);
-			return;
-		}
-	} else {
-		// user denied access
-		var urlParsed = buildUrl(query.redirect_uri, {
-			error: 'access_denied'
-		});
-		res.redirect(urlParsed);
-		return;
-	}
-	
 });
 
 app.post("/token", function(req, res){
@@ -207,7 +112,7 @@ app.post("/token", function(req, res){
 		var username = req.body.username;
 
 		users_db.find({username:username}, function (err, user) {
-			if (!user) {
+			if (user.length === 0) {
 				res.status(401).json({error: 'invalid_grant'});
 				return;
 			}
@@ -218,7 +123,8 @@ app.post("/token", function(req, res){
 				res.status(401).json({error: 'invalid_grant'});
 				return;
 			}
-			var rscope = req.body.scope ? req.body.scope.split(' ') : undefined;
+
+			var rscope = req.body.scope ? user[0].scope.split(' ') : undefined;
 			var cscope = client.scope ? client.scope.split(' ') : undefined;
 			if (__.difference(rscope, cscope).length > 0) {
 				res.status(401).json({error: 'invalid_scope'});
@@ -244,10 +150,6 @@ app.post("/token", function(req, res){
 					res.status(400).json({error: 'invalid_grant'});
 					return;
 				}
-
-				/*
-				 * Bonus: handle scopes for a refresh token request appropriately
-				 */
 
 				var access_token = randomstring.generate();
 				token_db.insert([{ access_token: access_token, client_id: clientId, scope: token[0].scope}]);
@@ -354,23 +256,6 @@ app.post('/introspect', function(req, res) {
 
 
 });
-
-
-var buildUrl = function(base, options, hash) {
-	var newUrl = url.parse(base, true);
-	delete newUrl.search;
-	if (!newUrl.query) {
-		newUrl.query = {};
-	}
-	__.each(options, function(value, key, list) {
-		newUrl.query[key] = value;
-	});
-	if (hash) {
-		newUrl.hash = hash;
-	}
-	
-	return url.format(newUrl);
-};
 
 var decodeClientCredentials = function(auth) {
 	var clientCredentials = new Buffer.from(auth.slice('basic '.length), 'base64').toString().split(':');

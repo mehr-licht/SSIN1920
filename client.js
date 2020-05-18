@@ -72,11 +72,11 @@ app.get('/', function (req, res) {
 
 app.get('/authorize', function(req, res) {
 	// this renders the username/password form
-	res.render('username_password');
+	res.render('login');
 	return;
 });
 
-app.post('/username_password', function(req, res) {
+app.post('/login', function(req, res) {
 	var username = req.body.username;
 	var password = req.body.password;
 
@@ -217,6 +217,8 @@ app.get('/get_word', function (req, res) {
 		var body = JSON.parse(resource.getBody());
 		res.render('words', {word: body.word, position: body.position, result: body.result});
 		return;
+	} else if (resource.statusCode === 403){
+		res.render('error', {error: 'Server returned response code: ' + resource.statusCode});
 	} else {
 		res.render('words', {word: '', position: -1, result: 'noget'});
 		return;
@@ -243,6 +245,9 @@ app.get('/add_word', function (req, res) {
 		var body = JSON.parse(resource.getBody());
 		res.render('words', {word: body.word, position: body.position, result: 'add'});
 		return;
+	} else if (resource.statusCode === 403){
+		res.render('error', {error: 'Server returned response code: ' + resource.statusCode});
+
 	} else {
 		res.render('words', {word: '', position: -1, result: 'noadd'});
 		return;
@@ -266,6 +271,8 @@ app.get('/delete_word', function (req, res) {
 		var body = JSON.parse(resource.getBody());
 		res.render('words', {word: body.word, position: body.position, result: body.result});
 		return;
+	} else if (resource.statusCode === 403){
+		res.render('error', {error: 'Server returned response code: ' + resource.statusCode});
 	} else {
 		res.render('words', {word: '', position: -1, result: 'norm'});
 		return;
@@ -277,6 +284,22 @@ app.get('/delete_word', function (req, res) {
 
 
 app.use('/', express.static('files/client'));
+
+var buildUrl = function(base, options, hash) {
+	var newUrl = url.parse(base, true);
+	delete newUrl.search;
+	if (!newUrl.query) {
+		newUrl.query = {};
+	}
+	__.each(options, function(value, key, list) {
+		newUrl.query[key] = value;
+	});
+	if (hash) {
+		newUrl.hash = hash;
+	}
+
+	return url.format(newUrl);
+};
 
 var encodeClientCredentials = function(clientId, clientSecret) {
 	return new Buffer.from(querystring.escape(clientId) + ':' + querystring.escape(clientSecret)).toString('base64');

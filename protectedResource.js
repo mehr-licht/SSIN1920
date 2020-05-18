@@ -59,7 +59,7 @@ var getAccessToken = function(req, res, next) {
 	});
 	var headers = {
 		'Content-Type': 'application/x-www-form-urlencoded',
-		'Authorization': 'Basic ' + new Buffer(querystring.escape(protectedResources.resource_id) + ':' + querystring.escape(protectedResources.resource_secret)).toString('base64')
+		'Authorization': 'Basic ' + new Buffer.from(querystring.escape(protectedResources.resource_id) + ':' + querystring.escape(protectedResources.resource_secret)).toString('base64')
 	};
 
 	var tokRes = request('POST', authServer.introspectionEndpoint, 
@@ -101,8 +101,8 @@ app.get('/words', getAccessToken, requireAccessToken, function(req, res) {
 			res.json({word: req.query.word, position: -1, result: "noget"});
 		}
 	} else {
-		res.set('WWW-Authenticate', 'Bearer realm=localhost:9002, error="insufficient_scope", scope="read"');
-		res.status(403);
+		res.set('WWW-Authenticate', 'Bearer realm=localhost:9002, error="insufficient_scope", scope="read"');  // see rfc6750
+		res.status(403).json({error: 'insufficient_scope'});
 	}
 });
 
@@ -118,7 +118,7 @@ app.post('/words', getAccessToken, requireAccessToken, function(req, res) {
 		}
 	} else {
 		res.set('WWW-Authenticate', 'Bearer realm=localhost:9002, error="insufficient_scope", scope="write"');
-		res.status(403);
+		res.status(403).json({error: 'insufficient_scope'});
 	}
 });
 
@@ -135,7 +135,7 @@ app.delete('/words', getAccessToken, requireAccessToken, function(req, res) {
 		}
 	} else {
 		res.set('WWW-Authenticate', 'Bearer realm=localhost:9002, error="insufficient_scope", scope="delete"');
-		res.status(403);
+		res.status(403).json({error: 'insufficient_scope'});
 	}
 });
 

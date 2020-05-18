@@ -37,21 +37,12 @@
     <div class="container">
 
       <div class="jumbotron">
-		  <p>Logged in user subject <span class="label label-default"><%- id_token ? id_token.sub : 'NONE' %></span> from issuer <span class="label label-default"><%- id_token ? id_token.iss : 'NONE' %></span>.
-		  <p>User information:
-			  <% if (userInfo) { %>
-				  <ul>
-					  <% _.each(userInfo, function(value, key, list) { %>
-					  
-					  	<li><b><%- key %></b>: <%- value %></li>
-					  
-					  <% }); %>
-				  </ul>
-		      <% } else { %>
-					  
-			  <% } %>
-		  </p>
-		  
+		  <h3>Get an access token</h3>
+		  <form class="form" action="/login" method="POST">
+			  <input type="text" name="username" placeholder="username">
+			  <input type="password" name="password" placeholder="password">
+			  <input type="submit" class="btn btn-warning" href="/" value="Get an access token" >
+		  </form>
       </div>
 
     </div><!-- /.container -->
