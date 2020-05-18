@@ -3,7 +3,8 @@ var url = require("url");
 var bodyParser = require('body-parser');
 var randomstring = require("randomstring");
 var cons = require('consolidate');
-var Datastore = require('nedb'), nedb = new Datastore({filename: './database.nedb', autoload: true});
+var Datastore = require('nedb'), token_db = new Datastore({filename: './tokens.nedb', autoload: true});
+var Datastore = require('nedb'), users_db = new Datastore({filename: './users.nedb', autoload: true});
 var querystring = require('querystring');
 var __ = require('underscore');
 __.string = require('underscore.string');
@@ -18,7 +19,22 @@ app.set('view engine', 'html');
 app.set('views', 'files/authorizationServer');
 app.set('json spaces', 4);
 
-// authorization server information
+/**
+ * Init Users database
+ */
+users_db.count({}, function (err, count) {
+	if (!count) {
+		users_db.insert([{username: 'alice', password: 'password'}, {
+			username: 'bob',
+			password: 'my_secret_password'
+		}], function (err, docs) {
+		});
+	}
+});
+
+/**
+ * Authorization server information
+ */
 var authServer = {
 	authorizationEndpoint: 'http://localhost:9001/authorize',
 	tokenEndpoint: 'http://localhost:9001/token'
@@ -187,46 +203,44 @@ app.post("/token", function(req, res){
 		return;
 	}
 
-	if (req.body.grant_type == 'authorization_code') {
+	if (req.body.grant_type == 'password') {
+		var username = req.body.username;
 
-		var code = codes[req.body.code];
-
-		if (code) {
-			delete codes[req.body.code]; // burn our code, it's been used
-			if (code.request.client_id == clientId) {
-
-				var access_token = randomstring.generate();
-				var refresh_token = randomstring.generate();
-
-				nedb.insert([{ access_token: access_token, client_id: clientId, scope: code.scope}]);
-				nedb.insert([{ refresh_token: refresh_token, client_id: clientId, scope: code.scope }]);
-
-				console.log('Issuing access token %s', access_token);
-
-				var token_response = { access_token: access_token, token_type: 'Bearer',  refresh_token: refresh_token, scope: code.scope.join(' ') };
-
-				res.status(200).json(token_response);
-				console.log('Issued tokens for code %s', req.body.code);
-				
-				return;
-			} else {
-				console.log('Client mismatch, expected %s got %s', code.request.client_id, clientId);
-				res.status(400).json({error: 'invalid_grant'});
+		users_db.find({username:username}, function (err, user) {
+			if (!user) {
+				res.status(401).json({error: 'invalid_grant'});
 				return;
 			}
-		
+			var password = req.body.password;
 
-		} else {
-			console.log('Unknown code, %s', req.body.code);
-			res.status(400).json({error: 'invalid_grant'});
-			return;
-		}
+			if (user[0].password != password) {
+				console.log('Mismatched resource owner password, expected %s got %s', user[0].password, password);
+				res.status(401).json({error: 'invalid_grant'});
+				return;
+			}
+			var rscope = req.body.scope ? req.body.scope.split(' ') : undefined;
+			var cscope = client.scope ? client.scope.split(' ') : undefined;
+			if (__.difference(rscope, cscope).length > 0) {
+				res.status(401).json({error: 'invalid_scope'});
+				return;
+			}
+			var access_token = randomstring.generate();
+			var refresh_token = randomstring.generate();
+
+			token_db.insert([{ access_token: access_token, client_id: clientId, scope: rscope}]);
+			token_db.insert([{ refresh_token: refresh_token, client_id: clientId, scope: rscope }]);
+
+			var token_response = { access_token: access_token, token_type: 'Bearer',  refresh_token: refresh_token, scope: rscope.join(' ') };
+
+			res.status(200).json(token_response);
+			});
+
 	} else if (req.body.grant_type == 'refresh_token') {
-		nedb.find({refresh_token: req.body.refresh_token}, function(err, token) {
+		token_db.find({refresh_token: req.body.refresh_token}, function(err, token) {
 			if (token) {
 				console.log("We found a matching refresh token: %s", req.body.refresh_token);
 				if (token[0].client_id != clientId) {
-					nedb.remove({access_token: req.body.refresh_token});
+					token_db.remove({access_token: req.body.refresh_token});
 					res.status(400).json({error: 'invalid_grant'});
 					return;
 				}
@@ -236,7 +250,7 @@ app.post("/token", function(req, res){
 				 */
 
 				var access_token = randomstring.generate();
-				nedb.insert([{ access_token: access_token, client_id: clientId, scope: token[0].scope}]);
+				token_db.insert([{ access_token: access_token, client_id: clientId, scope: token[0].scope}]);
 				var token_response = { access_token: access_token, token_type: 'Bearer',  refresh_token: token[0].refresh_token, scope: token[0].scope.join(' ') };
 				res.status(200).json(token_response);
 				return;
@@ -287,7 +301,7 @@ app.post('/revoke', function(req, res) {
 		return;
 	}
 
-	nedb.remove( {$and: [{client_id: clientId}] }, {multi:true}, function(err, numRemoved) {
+	token_db.remove( {$and: [{client_id: clientId}] }, {multi:true}, function(err, numRemoved) {
 		console.log("Removed %s tokens", numRemoved);
 		res.status(204).end();
 		return;
@@ -316,7 +330,7 @@ app.post('/introspect', function(req, res) {
 
 	var token = req.body.token;
 	console.log('Introspecting token %s', token);
-	nedb.find({access_token: req.body.token }, function(err, token) {
+	token_db.find({access_token: req.body.token }, function(err, token) {
 		if (token) {
 			console.log("We found a matching token: %s", req.body.token);
 
@@ -372,7 +386,7 @@ var getScopesFromForm = function(body) {
 
 app.use('/', express.static('files/authorizationServer'));
 
-nedb.remove({}, {multi: true});
+token_db.remove({}, {multi: true});
 
 var server = app.listen(9001, 'localhost', function () {
   var host = server.address().address;

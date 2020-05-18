@@ -51,23 +51,65 @@ app.get('/', function (req, res) {
 	res.render('index', {access_token: access_token, refresh_token: refresh_token, scope: scope});
 });
 
-app.get('/authorize', function(req, res){
+// app.get('/authorize', function(req, res){
+//
+// 	access_token = null;
+// 	refresh_token = null;
+// 	scope = null;
+// 	state = randomstring.generate();
+//
+// 	var authorizeUrl = buildUrl(authServer.authorizationEndpoint, {
+// 		response_type: 'code',
+// 		scope: client.scope,
+// 		client_id: client.client_id,
+// 		redirect_uri: client.redirect_uris[0],
+// 		state: state
+// 	});
+//
+// 	console.log("redirect", authorizeUrl);
+// 	res.redirect(authorizeUrl);
+// });
 
-	access_token = null;
-	refresh_token = null;
-	scope = null;
-	state = randomstring.generate();
-	
-	var authorizeUrl = buildUrl(authServer.authorizationEndpoint, {
-		response_type: 'code',
-		scope: client.scope,
-		client_id: client.client_id,
-		redirect_uri: client.redirect_uris[0],
-		state: state
+app.get('/authorize', function(req, res) {
+	// this renders the username/password form
+	res.render('username_password');
+	return;
+});
+
+app.post('/username_password', function(req, res) {
+	var username = req.body.username;
+	var password = req.body.password;
+
+	var form_data = qs.stringify({
+		grant_type: 'password',
+		username: username,
+		password: password,
+		scope: client.scope
 	});
-	
-	console.log("redirect", authorizeUrl);
-	res.redirect(authorizeUrl);
+
+	var headers = {
+		'Content-Type': 'application/x-www-form-urlencoded',
+		'Authorization': 'Basic ' + encodeClientCredentials(client.client_id, client.client_secret)
+	};
+
+	var tokRes = request('POST', authServer.tokenEndpoint, {
+		body: form_data,
+		headers: headers
+	});
+
+	if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
+		var body = JSON.parse(tokRes.getBody());
+
+		access_token = body.access_token;
+
+		scope = body.scope;
+
+		refresh_token = body.refresh_token;
+
+		res.render('index', {access_token: access_token, refresh_token: refresh_token, scope: scope});
+	} else {
+		res.render('error', {error: 'Unable to fetch access token, server response: ' + tokRes.statusCode})
+	}
 });
 
 app.get("/callback", function(req, res){
@@ -127,47 +169,6 @@ app.get("/callback", function(req, res){
 		res.render('error', {error: 'Unable to fetch access token, server response: ' + tokRes.statusCode})
 	}
 });
-
-var refreshAccessToken = function(req, res) {
-	var form_data = qs.stringify({
-		grant_type: 'refresh_token',
-		refresh_token: refresh_token,
-		client_id: client.client_id,
-		client_secret: client.client_secret,
-		redirect_uri: client.redirect_uri
-	});
-	var headers = {
-		'Content-Type': 'application/x-www-form-urlencoded'
-	};
-	console.log('Refreshing token %s', refresh_token);
-	var tokRes = request('POST', authServer.tokenEndpoint,
-		{
-			body: form_data,
-			headers: headers
-		}
-	);
-	if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
-		var body = JSON.parse(tokRes.getBody());
-
-		access_token = body.access_token;
-		console.log('Got access token: %s', access_token);
-		if (body.refresh_token) {
-			refresh_token = body.refresh_token;
-			console.log('Got refresh token: %s', refresh_token);
-		}
-		scope = body.scope;
-		console.log('Got scope: %s', scope);
-
-		// try again
-		res.redirect('/fetch_resource');
-		return;
-	} else {
-		console.log('No refresh token, asking the user to get a new access token');
-		// tell the user to get a new access token
-		res.redirect('/authorize');
-		return;
-	}
-};
 
 app.post('/revoke', function(req, res) {
 	var form_data = qs.stringify({
@@ -276,22 +277,6 @@ app.get('/delete_word', function (req, res) {
 
 
 app.use('/', express.static('files/client'));
-
-var buildUrl = function(base, options, hash) {
-	var newUrl = url.parse(base, true);
-	delete newUrl.search;
-	if (!newUrl.query) {
-		newUrl.query = {};
-	}
-	__.each(options, function(value, key, list) {
-		newUrl.query[key] = value;
-	});
-	if (hash) {
-		newUrl.hash = hash;
-	}
-	
-	return url.format(newUrl);
-};
 
 var encodeClientCredentials = function(clientId, clientSecret) {
 	return new Buffer.from(querystring.escape(clientId) + ':' + querystring.escape(clientSecret)).toString('base64');
