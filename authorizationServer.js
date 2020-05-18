@@ -1,15 +1,10 @@
-var express = require("express");
+var express = require('express');
 var url = require("url");
 var bodyParser = require('body-parser');
 var randomstring = require("randomstring");
 var cons = require('consolidate');
-var Datastore = require('nedb'),
-	nedb = new Datastore({
-		filename: './database.nedb',
-		autoload: true
-	});
+var Datastore = require('nedb'), nedb = new Datastore({filename: './database.nedb', autoload: true});
 var querystring = require('querystring');
-var qs = require("qs");
 var __ = require('underscore');
 __.string = require('underscore.string');
 
@@ -31,13 +26,22 @@ var authServer = {
 
 // client information
 var clients = [
+
 	{
 		"client_id": "oauth-client-1",
 		"client_secret": "oauth-client-secret-1",
 		"redirect_uris": ["http://localhost:9000/callback"],
-		"scope": "movies foods music"
+		"scope": "read write delete"
 	}
 ];
+
+var protectedResources = [
+	{
+		"resource_id": "protected-resource-1",
+		"resource_secret": "protected-resource-secret-1"
+	}
+];
+
 
 var codes = {};
 
@@ -47,36 +51,8 @@ var getClient = function(clientId) {
 	return __.find(clients, function(client) { return client.client_id == clientId; });
 };
 
-var getUser = function(username) {
-	return __.find(userInfo, function (user, key) { return user.username == username; });
-};
-
-var userInfo = {
-	"alice": {
-		"sub": "9XE3-JI34-00132A",
-		"preferred_username": "alice",
-		"name": "Alice",
-		"email": "alice.wonderland@example.com",
-		"email_verified": true
-	},
-	
-	"bob": {
-		"sub": "1ZT5-OE63-57383B",
-		"preferred_username": "bob",
-		"name": "Bob",
-		"email": "bob.loblob@example.net",
-		"email_verified": false
-	},
-
-	"carol": {
-		"sub": "F5Q1-L6LGG-959FS",
-		"preferred_username": "carol",
-		"name": "Carol",
-		"email": "carol.lewis@example.net",
-		"email_verified": true,
-		"username" : "clewis",
-		"password" : "user password!"
- 	}	
+var getProtectedResource = function(resourceId) {
+	return __.find(protectedResources, function(resource) { return resource.resource_id == resourceId; });
 };
 
 app.get('/', function(req, res) {
@@ -100,12 +76,10 @@ app.get("/authorize", function(req, res){
 		var rscope = req.query.scope ? req.query.scope.split(' ') : undefined;
 		var cscope = client.scope ? client.scope.split(' ') : undefined;
 		if (__.difference(rscope, cscope).length > 0) {
-			// client asked for a scope it couldn't have
-			var urlParsed = url.parse(req.query.redirect_uri);
-			delete urlParsed.search; // this is a weird behavior of the URL library
-			urlParsed.query = urlParsed.query || {};
-			urlParsed.query.error = 'invalid_scope';
-			res.redirect(url.format(urlParsed));
+			var urlParsed = buildUrl(req.query.redirect_uri, {
+				error: 'invalid_scope'
+			});
+			res.redirect(urlParsed);
 			return;
 		}
 		
@@ -134,131 +108,57 @@ app.post('/approve', function(req, res) {
 	if (req.body.approve) {
 		if (query.response_type == 'code') {
 			// user approved access
+
+			var rscope = getScopesFromForm(req.body);
+			var client = getClient(query.client_id);
+			var cscope = client.scope ? client.scope.split(' ') : undefined;
+			if (__.difference(rscope, cscope).length > 0) {
+				var urlParsed = buildUrl(query.redirect_uri, {
+					error: 'invalid_scope'
+				});
+				res.redirect(urlParsed);
+				return;
+			}
+
 			var code = randomstring.generate(8);
 			
-			var user = req.body.user;
-		
-			var scope = __.filter(__.keys(req.body), function(s) { return __.string.startsWith(s, 'scope_'); })
-				.map(function(s) { return s.slice('scope_'.length); });
-			var client = getClient(query.client_id);
-			var cscope = client.scope ? client.scope.split(' ') : undefined;
-			if (__.difference(scope, cscope).length > 0) {
-				// client asked for a scope it couldn't have
-				var urlParsed = url.parse(query.redirect_uri);
-				delete urlParsed.search; // this is a weird behavior of the URL library
-				urlParsed.query = urlParsed.query || {};
-				urlParsed.query.error = 'invalid_scope';
-				res.redirect(url.format(urlParsed));
-				return;
-			}
-
 			// save the code and request for later
-			codes[code] = { authorizationEndpointRequest: query, scope: scope, user: user };
+			
+			codes[code] = { request: query, scope: rscope };
 		
-			var urlParsed =url.parse(query.redirect_uri);
-			delete urlParsed.search; // this is a weird behavior of the URL library
-			urlParsed.query = urlParsed.query || {};
-			urlParsed.query.code = code;
-			urlParsed.query.state = query.state; 
-			res.redirect(url.format(urlParsed));
+			var urlParsed = buildUrl(query.redirect_uri, {
+				code: code,
+				state: query.state
+			});
+			res.redirect(urlParsed);
 			return;
-		} else if (query.response_type == 'token') {
-			var user = req.body.user;
-		
-			var scope = __.filter(__.keys(req.body), function(s) { return __.string.startsWith(s, 'scope_'); })
-				.map(function(s) { return s.slice('scope_'.length); });
-			var client = getClient(query.client_id);
-			var cscope = client.scope ? client.scope.split(' ') : undefined;
-			if (__.difference(scope, cscope).length > 0) {
-				// client asked for a scope it couldn't have
-				var urlParsed = url.parse(query.redirect_uri);
-				delete urlParsed.search; // this is a weird behavior of the URL library
-				urlParsed.query = urlParsed.query || {};
-				urlParsed.query.error = 'invalid_scope';
-				res.redirect(url.format(urlParsed));
-				return;
-			}
-
-			var user = userInfo[user];
-			if (!user) {		
-				console.log('Unknown user %s', user)
-				res.status(500).render('error', {error: 'Unknown user ' + user});
-				return;
-			}
-	
-			console.log("User %j", user);
-
-			var token_response = generateTokens(req, res, query.clientId, user, cscope);		
-
-			var urlParsed = url.parse(query.redirect_uri);
-			delete urlParsed.search; // this is a weird behavior of the URL library
-			if (query.state) {
-				token_response.state = query.state;
-			} 				
-			urlParsed.hash = qs.stringify(token_response);
-			res.redirect(url.format(urlParsed));
-			return;
-
 		} else {
 			// we got a response type we don't understand
-			var urlParsed =url.parse(query.redirect_uri);
-			delete urlParsed.search; // this is a weird behavior of the URL library
-			urlParsed.query = urlParsed.query || {};
-			urlParsed.query.error = 'unsupported_response_type';
-			res.redirect(url.format(urlParsed));
+			var urlParsed = buildUrl(query.redirect_uri, {
+				error: 'unsupported_response_type'
+			});
+			res.redirect(urlParsed);
 			return;
 		}
 	} else {
 		// user denied access
-		var urlParsed =url.parse(query.redirect_uri);
-		delete urlParsed.search; // this is a weird behavior of the URL library
-		urlParsed.query = urlParsed.query || {};
-		urlParsed.query.error = 'access_denied';
-		res.redirect(url.format(urlParsed));
+		var urlParsed = buildUrl(query.redirect_uri, {
+			error: 'access_denied'
+		});
+		res.redirect(urlParsed);
 		return;
 	}
 	
 });
 
-var generateTokens = function (req, res, clientId, user, scope, nonce, generateRefreshToken) {
-	var access_token = randomstring.generate();
-
-	var refresh_token = null;
-
-	if (generateRefreshToken) {
-		refresh_token = randomstring.generate();	
-	}	
-
-	nedb.insert({ access_token: access_token, client_id: clientId, scope: scope, user: user.preferred_username });
-
-	if (refresh_token) {
-		nedb.insert({ refresh_token: refresh_token, client_id: clientId, scope: scope, user: user });
-	}
-	
-	console.log('Issuing access token %s', access_token);
-	if (refresh_token) {
-		console.log('and refresh token %s', refresh_token);
-	}
-	console.log('with scope %s', access_token, scope);
-
-	var cscope = null;
-	if (scope) {
-		cscope = scope.join(' ')
-	}
-
-	var token_response = { access_token: access_token, token_type: 'Bearer',  refresh_token: refresh_token, scope: cscope };
-
-	return token_response;
-};
-
 app.post("/token", function(req, res){
-	
+
 	var auth = req.headers['authorization'];
 	if (auth) {
 		// check the auth header
-		var clientCredentials = new Buffer(auth.slice('basic '.length), 'base64').toString().split(':');
-		var clientId = querystring.unescape(clientCredentials[0]);
-		var clientSecret = querystring.unescape(clientCredentials[1]);
+		var clientCredentials = decodeClientCredentials(auth);
+		var clientId = clientCredentials.id;
+		var clientSecret = clientCredentials.secret;
 	}
 	
 	// otherwise, check the post body
@@ -286,114 +186,193 @@ app.post("/token", function(req, res){
 		res.status(401).json({error: 'invalid_client'});
 		return;
 	}
-	
+
 	if (req.body.grant_type == 'authorization_code') {
-		
+
 		var code = codes[req.body.code];
-		
+
 		if (code) {
 			delete codes[req.body.code]; // burn our code, it's been used
-			if (code.authorizationEndpointRequest.client_id == clientId) {
+			if (code.request.client_id == clientId) {
 
-				var user = userInfo[code.user];
-				if (!user) {		
-					console.log('Unknown user %s', user)
-					res.status(500).render('error', {error: 'Unknown user ' + code.user});
-					return;
-				}	
-				console.log("User %j", user);
+				var access_token = randomstring.generate();
+				var refresh_token = randomstring.generate();
 
-				var token_response = generateTokens(req, res, clientId, user, code.scope, code.authorizationEndpointRequest.nonce, true);
+				nedb.insert([{ access_token: access_token, client_id: clientId, scope: code.scope}]);
+				nedb.insert([{ refresh_token: refresh_token, client_id: clientId, scope: code.scope }]);
+
+				console.log('Issuing access token %s', access_token);
+
+				var token_response = { access_token: access_token, token_type: 'Bearer',  refresh_token: refresh_token, scope: code.scope.join(' ') };
 
 				res.status(200).json(token_response);
 				console.log('Issued tokens for code %s', req.body.code);
 				
 				return;
 			} else {
-				console.log('Client mismatch, expected %s got %s', code.authorizationEndpointRequest.client_id, clientId);
+				console.log('Client mismatch, expected %s got %s', code.request.client_id, clientId);
 				res.status(400).json({error: 'invalid_grant'});
 				return;
 			}
+		
+
 		} else {
 			console.log('Unknown code, %s', req.body.code);
 			res.status(400).json({error: 'invalid_grant'});
 			return;
 		}
-	} else if (req.body.grant_type == 'client_credentials') {
-		var scope = req.body.scope ? req.body.scope.split(' ') : undefined;
-		var client = getClient(query.client_id);
-		var cscope = client.scope ? client.scope.split(' ') : undefined;
-		if (__.difference(scope, cscope).length > 0) {
-			// client asked for a scope it couldn't have
-			res.status(400).json({error: 'invalid_scope'});
-			return;
-		}
-
-		var access_token = randomstring.generate();
-		var token_response = { access_token: access_token, token_type: 'Bearer', scope: scope.join(' ') };
-		nedb.insert({ access_token: access_token, client_id: clientId, scope: scope });
-		console.log('Issuing access token %s', access_token);
-		res.status(200).json(token_response);
-		return;	
-		
 	} else if (req.body.grant_type == 'refresh_token') {
-		nedb.all(function(token) {
-			return (token.refresh_token == req.body.refresh_token);
-		}, function(err, tokens) {
-			if (tokens.length == 1) {
-				var token = tokens[0];
-				if (token.client_id != clientId) {
-					console.log('Invalid client using a refresh token, expected %s got %s', token.client_id, clientId);
-					nedb.remove(function(found) { return (found == token); }, function () {} );
-					res.status(400).end();
-					return
+		nedb.find({refresh_token: req.body.refresh_token}, function(err, token) {
+			if (token) {
+				console.log("We found a matching refresh token: %s", req.body.refresh_token);
+				if (token[0].client_id != clientId) {
+					nedb.remove({access_token: req.body.refresh_token});
+					res.status(400).json({error: 'invalid_grant'});
+					return;
 				}
-				console.log("We found a matching token: %s", req.body.refresh_token);
+
+				/*
+				 * Bonus: handle scopes for a refresh token request appropriately
+				 */
+
 				var access_token = randomstring.generate();
-				var token_response = { access_token: access_token, token_type: 'Bearer',  refresh_token: req.body.refresh_token };
-				nedb.insert({ access_token: access_token, client_id: clientId });
-				console.log('Issuing access token %s for refresh token %s', access_token, req.body.refresh_token);
+				nedb.insert([{ access_token: access_token, client_id: clientId, scope: token[0].scope}]);
+				var token_response = { access_token: access_token, token_type: 'Bearer',  refresh_token: token[0].refresh_token, scope: token[0].scope.join(' ') };
 				res.status(200).json(token_response);
 				return;
 			} else {
 				console.log('No matching token was found.');
-				res.status(401).end();
+				res.status(400).json({error: 'invalid_grant'});
+				return;
 			}
 		});
-	} else if (req.body.grant_type == 'password') {
-		var username = req.body.username;
-		var user = getUser(username);
-		if (!user) {
-			console.log('Unknown user %s', user);
-			res.status(401).json({error: 'invalid_grant'});
-			return;
-		}
-		console.log("user is %j ", user)
-		
-		var password = req.body.password;
-		if (user.password != password) {
-			console.log('Mismatched resource owner password, expected %s got %s', user.password, password);
-			res.status(401).json({error: 'invalid_grant'});
-			return;
-		}
-
-		var scope = req.body.scope;
-
-		var token_response = generateTokens(req, res, clientId, user, scope);
-		
-		res.status(200).json(token_response);		
-		return;
 	} else {
 		console.log('Unknown grant type %s', req.body.grant_type);
 		res.status(400).json({error: 'unsupported_grant_type'});
 	}
 });
 
+app.post('/revoke', function(req, res) {
+	var auth = req.headers['authorization'];
+	if (auth) {
+		// check the auth header
+		var clientCredentials = decodeClientCredentials(auth);
+		var clientId = clientCredentials.id;
+		var clientSecret = clientCredentials.secret;
+	}
+	
+	// otherwise, check the post body
+	if (req.body.client_id) {
+		if (clientId) {
+			// if we've already seen the client's credentials in the authorization header, this is an error
+			console.log('Client attempted to authenticate with multiple methods');
+			res.status(401).json({error: 'invalid_client'});
+			return;
+		}
+		
+		var clientId = req.body.client_id;
+		var clientSecret = req.body.client_secret;
+	}
+	
+	var client = getClient(clientId);
+	if (!client) {
+		console.log('Unknown client %s', clientId);
+		res.status(401).json({error: 'invalid_client'});
+		return;
+	}
+	
+	if (client.client_secret != clientSecret) {
+		console.log('Mismatched client secret, expected %s got %s', client.client_secret, clientSecret);
+		res.status(401).json({error: 'invalid_client'});
+		return;
+	}
+
+	nedb.remove( {$and: [{client_id: clientId}] }, {multi:true}, function(err, numRemoved) {
+		console.log("Removed %s tokens", numRemoved);
+		res.status(204).end();
+		return;
+	});
+	
+});
+
+app.post('/introspect', function(req, res) {
+	var auth = req.headers['authorization'];
+	var resourceCredentials = new Buffer.from(auth.slice('basic '.length), 'base64').toString().split(':');
+	var resourceId = querystring.unescape(resourceCredentials[0]);
+	var resourceSecret = querystring.unescape(resourceCredentials[1]);
+
+	var resource = getProtectedResource(resourceId);
+	if (!resource) {
+		console.log('Unknown resource %s', resourceId);
+		res.status(401).end();
+		return;
+	}
+
+	if (resource.resource_secret != resourceSecret) {
+		console.log('Mismatched secret, expected %s got %s', resource.resource_secret, resourceSecret);
+		res.status(401).end();
+		return;
+	}
+
+	var token = req.body.token;
+	console.log('Introspecting token %s', token);
+	nedb.find({access_token: req.body.token }, function(err, token) {
+		if (token) {
+			console.log("We found a matching token: %s", req.body.token);
+
+			var introspectionResponse = {};
+			introspectionResponse.active = true;
+			introspectionResponse.iss = 'http://localhost:9001/';
+			introspectionResponse.scope = token[0].scope.join(' ');
+			introspectionResponse.client_id = token[0].client_id;
+
+			res.status(200).json(introspectionResponse);
+			return;
+		} else {
+			console.log('No matching token was found.');
+
+			var introspectionResponse = {};
+			introspectionResponse.active = false;
+			res.status(200).json(introspectionResponse);
+			return;
+		}
+	});
+
+
+});
+
+
+var buildUrl = function(base, options, hash) {
+	var newUrl = url.parse(base, true);
+	delete newUrl.search;
+	if (!newUrl.query) {
+		newUrl.query = {};
+	}
+	__.each(options, function(value, key, list) {
+		newUrl.query[key] = value;
+	});
+	if (hash) {
+		newUrl.hash = hash;
+	}
+	
+	return url.format(newUrl);
+};
+
+var decodeClientCredentials = function(auth) {
+	var clientCredentials = new Buffer.from(auth.slice('basic '.length), 'base64').toString().split(':');
+	var clientId = querystring.unescape(clientCredentials[0]);
+	var clientSecret = querystring.unescape(clientCredentials[1]);	
+	return { id: clientId, secret: clientSecret };
+};
+
+var getScopesFromForm = function(body) {
+	return __.filter(__.keys(body), function(s) { return __.string.startsWith(s, 'scope_'); })
+				.map(function(s) { return s.slice('scope_'.length); });
+};
+
 app.use('/', express.static('files/authorizationServer'));
 
-nedb.remove({}, {
-	multi: true
-});
+nedb.remove({}, {multi: true});
 
 var server = app.listen(9001, 'localhost', function () {
   var host = server.address().address;

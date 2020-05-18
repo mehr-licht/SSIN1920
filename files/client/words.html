@@ -29,7 +29,7 @@
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container">
         <div class="navbar-header">
-          <a class="navbar-brand" href="/">OAuth in Action: <span class="label label-primary">OAuth Client</label></a>
+          <a class="navbar-brand" href="/">OAuth in Action: <span class="label label-primary">OAuth Client</span></a>
         </div>
       </div>
     </nav>
@@ -40,12 +40,15 @@
 		  
 		  <div class="col-md-4">
 			  <div class="well">
-				  <h3>Read the current value</h3>
+				  <h3>Read word from the list</h3>
 				  <% if (result == 'get') { %><p><span class="label label-success">Success</span></p><% } %>
 				  <% if (result == 'noget') { %><p><span class="label label-danger">Failure</span></p><% } %>
-				  <p><%- words ? 'Words: ' + words : ''%></p>
-				  <p><%- timestamp ? 'Timestamp: ' + timestamp : ''%></p>
-			  	  <a class="btn btn-info" href="/get_words">GET current value</a> 
+				  <% if (result == 'get' || result == 'noget') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
+				  <% if (position !== -1 && (result == 'get' || result == 'noget')) { %><p><%- 'Position: ' + position %></p><% } %>
+				  <form class="form" action="/get_word" method="GET">
+					  <input type="text" name="word" placeholder="word">
+					  <input type="submit" class="btn btn-info" href="/" value="GET a new word" >
+				  </form>
 			  </div>
 		  </div>
 		  <div class="col-md-4">
@@ -53,6 +56,8 @@
 				  <h3>Add a word to the list</h3>
 				  <% if (result == 'add') { %><p><span class="label label-success">Success</span></p><% } %>
 				  <% if (result == 'noadd') { %><p><span class="label label-danger">Failure</span></p><% } %>
+				  <% if (result == 'add' || result == 'noadd') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
+				  <% if (position !== -1 && (result == 'add' || result == 'noadd')) { %><p><%- 'Position: ' + position %></p><% } %>
 				  <form class="form" action="/add_word" method="GET">
 					  <input type="text" name="word" placeholder="word">
 					  <input type="submit" class="btn btn-warning" href="/" value="POST a new word" >
@@ -61,10 +66,15 @@
 		  </div>
 		  <div class="col-md-4">
 			  <div class="well">
-				  <h3>Remove the last word from the list</h3>
+				  <h3>Remove a word from the list</h3>
 				  <% if (result == 'rm') { %><p><span class="label label-success">Success</span></p><% } %>
 				  <% if (result == 'norm') { %><p><span class="label label-danger">Failure</span></p><% } %>
- 			  	  <a class="btn btn-danger" href="/delete_word">DELETE the last word</a> 
+				  <% if (result == 'rm' || result == 'norm') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
+				  <% if (position !== -1 && (result == 'rm' || result == 'norm')) { %><p><%- 'Position: ' + position %></p><% } %>
+				  <form class="form" action="/delete_word" method="GET">
+					  <input type="text" name="word" placeholder="word">
+					  <input type="submit" class="btn btn-danger" href="/" value="DELETE a word" >
+				  </form>
 			  </div>
 		  </div>
 		  

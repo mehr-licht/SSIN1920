@@ -1,2 +1,0 @@
-{"access_token":"GcPsKGbKFtukn5lkqMumSaOCy5WzrFaR","client_id":"oauth-client-1","scope":["movies","foods","music"],"user":"alice"}
-{"refresh_token":"eGdVYdL90VPFW4Ns7zqholOVQyr9Pv9T","client_id":"oauth-client-1","scope":["movies","foods","music"],"user":{"sub":"9XE3-JI34-00132A","preferred_username":"alice","name":"Alice","email":"alice.wonderland@example.com","email_verified":true}}
