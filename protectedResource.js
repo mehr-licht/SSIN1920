@@ -1,14 +1,10 @@
 var express = require("express");
-var url = require("url");
 var bodyParser = require('body-parser');
-var randomstring = require("randomstring");
 var cons = require('consolidate');
 var qs = require("qs");
 var querystring = require('querystring');
 var request = require("sync-request");
 var __ = require('underscore');
-var base64url = require('base64url');
-var jose = require('jsrsasign');
 var cors = require('cors');
 
 var app = express();
@@ -22,12 +18,6 @@ app.set('json spaces', 4);
 
 app.use('/', express.static('files/protectedResource'));
 app.use(cors());
-
-var resource = {
-	"name": "Protected Resource",
-	"description": "This data has been protected by OAuth 2.0"
-};
-
 
 var protectedResources = {
 		"resource_id": "protected-resource",
