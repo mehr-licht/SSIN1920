@@ -45,13 +45,23 @@ const authServer = {
 /**
  * Words API resource endpoint.
  */
-const wordApi = 'http://localhost:9002/words';
+const wordApiEndpoint = 'http://localhost:9002/words';
 
 const state = null;
 
 let accessToken = null;
 let refreshToken = null;
 let scope = null;
+
+
+/**
+ * Encode credentials sent to the authorization server.
+ *
+ * @param clientId
+ * @param clientSecret
+ * @returns {string}
+ */
+const encodeClientCredentials = (clientId, clientSecret) => Buffer.from(`${querystring.escape(clientId)}:${querystring.escape(clientSecret)}`).toString('base64');
 
 /**
  * Route HTTP GET request to client root.
@@ -69,13 +79,13 @@ app.get('/authorize', (req, res) => {
 });
 
 /**
- * Route HTTP POST request to server root.
+ * Route HTTP POST request to obtain a token from authorization server.
  */
 app.post('/login', (req, res) => {
   const { username } = req.body;
   const { password } = req.body;
 
-  const form_data = qs.stringify({
+  const formData = qs.stringify({
     grant_type: 'password',
     username,
     password,
@@ -87,13 +97,13 @@ app.post('/login', (req, res) => {
     Authorization: `Basic ${encodeClientCredentials(client.client_id, client.client_secret)}`,
   };
 
-  const tokRes = request('POST', authServer.token_endpoint, {
-    body: form_data,
+  const tokenResponse = request('POST', authServer.token_endpoint, {
+    body: formData,
     headers,
   });
 
-  if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
-    const body = JSON.parse(tokRes.getBody());
+  if (tokenResponse.statusCode >= 200 && tokenResponse.statusCode < 300) {
+    const body = JSON.parse(tokenResponse.getBody());
 
     accessToken = body.access_token;
 
@@ -103,7 +113,7 @@ app.post('/login', (req, res) => {
 
     res.render('index', { access_token: accessToken, refresh_token: refreshToken, scope });
   } else {
-    res.render('error', { error: `Unable to fetch access token, server response: ${tokRes.statusCode}` });
+    res.render('error', { error: `Unable to fetch access token, server response: ${tokenResponse.statusCode}` });
   }
 });
 
@@ -197,7 +207,7 @@ app.get('/get_word', (req, res) => {
     'Content-Type': 'application/x-www-form-urlencoded',
   };
 
-  const resource = request('GET', wordApi,
+  const resource = request('GET', wordApiEndpoint,
     { headers, qs: req.query });
 
   if (resource.statusCode >= 200 && resource.statusCode < 300) {
@@ -218,7 +228,7 @@ app.get('/add_word', (req, res) => {
 
   const form_body = qs.stringify({ word: req.query.word });
 
-  const resource = request('POST', wordApi,
+  const resource = request('POST', wordApiEndpoint,
     { headers, body: form_body });
 
   if (resource.statusCode >= 200 && resource.statusCode < 300) {
@@ -237,7 +247,7 @@ app.get('/delete_word', (req, res) => {
     'Content-Type': 'application/x-www-form-urlencoded',
   };
 
-  const resource = request('DELETE', wordApi,
+  const resource = request('DELETE', wordApiEndpoint,
     { headers, qs: req.query });
 
   if (resource.statusCode >= 200 && resource.statusCode < 300) {
@@ -252,26 +262,6 @@ app.get('/delete_word', (req, res) => {
 
 
 app.use('/', express.static('files/client'));
-
-const buildUrl = function (base, options, hash) {
-  const newUrl = url.parse(base, true);
-  delete newUrl.search;
-  if (!newUrl.query) {
-    newUrl.query = {};
-  }
-  __.each(options, (value, key, list) => {
-    newUrl.query[key] = value;
-  });
-  if (hash) {
-    newUrl.hash = hash;
-  }
-
-  return url.format(newUrl);
-};
-
-var encodeClientCredentials = function (clientId, clientSecret) {
-  return new Buffer.from(`${querystring.escape(clientId)}:${querystring.escape(clientSecret)}`).toString('base64');
-};
 
 var server = app.listen(9000, 'localhost', () => {
   const host = server.address().address;
