@@ -113,8 +113,11 @@ app.post('/login', (req, res) => {
   }
 });
 
+/**
+ * Route HTTP POST request to revoke tokens on the authorization server.
+ */
 app.post('/revoke', (req, res) => {
-  const form_data = qs.stringify({
+  const formData = qs.stringify({
     token: refreshToken,
   });
   const headers = {
@@ -122,8 +125,8 @@ app.post('/revoke', (req, res) => {
     Authorization: `Basic ${encodeClientCredentials(client.client_id, client.client_secret)}`,
   };
   console.log('Revoking token %s', refreshToken);
-  const tokRes = request('POST', authServer.revocation_endpoint, {
-    body: form_data,
+  const tokenResponse = request('POST', authServer.revocation_endpoint, {
+    body: formData,
     headers,
   });
 
@@ -131,17 +134,23 @@ app.post('/revoke', (req, res) => {
   refreshToken = null;
   scope = null;
 
-  if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
+  if (tokenResponse.statusCode >= 200 && tokenResponse.statusCode < 300) {
     res.render('index', { access_token: accessToken, refresh_token: refreshToken, scope });
   } else {
-    res.render('error', { error: tokRes.statusCode });
+    res.render('error', { error: tokenResponse.statusCode });
   }
 });
 
+/**
+ * Route HTTP GET request to Words API (Protected Resource).
+ */
 app.get('/words', (req, res) => {
   res.render('words', { word: '', position: -1, result: '' });
 });
 
+/**
+ * Route HTTP GET request to obtain a word from Words API (Protected Resource).
+ */
 app.get('/get_word', (req, res) => {
   const headers = {
     Authorization: `Bearer ${accessToken}`,
@@ -161,16 +170,19 @@ app.get('/get_word', (req, res) => {
   }
 });
 
+/**
+ * Route HTTP GET request to add a word to Words API (Protected Resource).
+ */
 app.get('/add_word', (req, res) => {
   const headers = {
     Authorization: `Bearer ${accessToken}`,
     'Content-Type': 'application/x-www-form-urlencoded',
   };
 
-  const form_body = qs.stringify({ word: req.query.word });
+  const formBody = qs.stringify({ word: req.query.word });
 
   const resource = request('POST', wordApiEndpoint,
-    { headers, body: form_body });
+    { headers, body: formBody });
 
   if (resource.statusCode >= 200 && resource.statusCode < 300) {
     const body = JSON.parse(resource.getBody());
@@ -182,6 +194,9 @@ app.get('/add_word', (req, res) => {
   }
 });
 
+/**
+ * Route HTTP GET request to delete a word from Words API (Protected Resource).
+ */
 app.get('/delete_word', (req, res) => {
   const headers = {
     Authorization: `Bearer ${accessToken}`,
@@ -202,10 +217,17 @@ app.get('/delete_word', (req, res) => {
 });
 
 
+/**
+ * Middleware function mount point for server.
+ */
 app.use('/', express.static('files/client'));
 
-var server = app.listen(9000, 'localhost', () => {
+/**
+ * Set Express web application listening port.
+ */
+const server = app.listen(9000, 'localhost', () => {
   const host = server.address().address;
   const { port } = server.address();
+
   console.log('OAuth Client listening at http://%s:%s', host, port);
 });

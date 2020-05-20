@@ -307,15 +307,14 @@ app.post('/introspect', (req, res) => {
 });
 
 /**
- * Middleware function mount point for server.
- */
-app.use('/', express.static('files/authorizationServer'));
-
-
-/**
  * Delete token database entries.
  */
 tokenDb.remove({}, { multi: true });
+
+/**
+ * Middleware function mount point for server.
+ */
+app.use('/', express.static('files/authorizationServer'));
 
 /**
  * Set Express web application listening port.
