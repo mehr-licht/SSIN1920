@@ -67,7 +67,6 @@ const clients = [
   {
     client_id: 'oauth-client',
     client_secret: 'oauth-client-secret',
-    redirect_uris: ['http://localhost:9000/callback'],
     scope: 'read write delete',
   },
 ];

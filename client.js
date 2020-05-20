@@ -1,7 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const request = require('sync-request');
-const url = require('url');
 const qs = require('qs');
 const querystring = require('querystring');
 const cons = require('consolidate');
@@ -29,7 +28,6 @@ app.set('views', 'files/client');
 const client = {
   client_id: 'oauth-client',
   client_secret: 'oauth-client-secret',
-  redirect_uris: ['http://localhost:9000/callback'],
   scope: 'read write delete',
 };
 
@@ -112,52 +110,6 @@ app.post('/login', (req, res) => {
     res.render('index', { access_token: accessToken, refresh_token: refreshToken, scope });
   } else {
     res.render('error', { error: `Unable to fetch access token, server response: ${tokenResponse.statusCode}` });
-  }
-});
-
-app.get('/callback', (req, res) => {
-  if (req.query.error) {
-    // it's an error response, act accordingly
-    res.render('error', { error: req.query.error });
-    return;
-  }
-
-  const { code } = req.query;
-
-  const form_data = qs.stringify({
-    grant_type: 'authorization_code',
-    code,
-    redirect_uri: client.redirect_uris[0],
-  });
-  const headers = {
-    'Content-Type': 'application/x-www-form-urlencoded',
-    Authorization: `Basic ${encodeClientCredentials(client.client_id, client.client_secret)}`,
-  };
-
-  const tokRes = request('POST', authServer.token_endpoint,
-    {
-      body: form_data,
-      headers,
-    });
-
-  console.log('Requesting access token for code %s', code);
-
-  if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
-    const body = JSON.parse(tokRes.getBody());
-
-    accessToken = body.access_token;
-    console.log('Got access token: %s', accessToken);
-    if (body.refresh_token) {
-      refreshToken = body.refresh_token;
-      console.log('Got refresh token: %s', refreshToken);
-    }
-
-    scope = body.scope;
-    console.log('Got scope: %s', scope);
-
-    res.render('index', { access_token: accessToken, refresh_token: refreshToken, scope });
-  } else {
-    res.render('error', { error: `Unable to fetch access token, server response: ${tokRes.statusCode}` });
   }
 });
 
