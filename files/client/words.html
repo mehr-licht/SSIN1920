@@ -45,7 +45,7 @@
 				  <% if (result == 'noget') { %><p><span class="label label-danger">Failure</span></p><% } %>
 				  <% if (result == 'get' || result == 'noget') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
 				  <% if (position !== -1 && (result == 'get' || result == 'noget')) { %><p><%- 'Position: ' + position %></p><% } %>
-				  <form class="form" action="/get_word" method="GET">
+				  <form class="form" action="/words/read" method="GET">
 					  <input type="text" name="word" placeholder="word">
 					  <input type="submit" class="btn btn-info" href="/" value="GET a new word" >
 				  </form>
@@ -58,7 +58,7 @@
 				  <% if (result == 'noadd') { %><p><span class="label label-danger">Failure</span></p><% } %>
 				  <% if (result == 'add' || result == 'noadd') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
 				  <% if (position !== -1 && (result == 'add' || result == 'noadd')) { %><p><%- 'Position: ' + position %></p><% } %>
-				  <form class="form" action="/add_word" method="GET">
+				  <form class="form" action="/words/add" method="GET">
 					  <input type="text" name="word" placeholder="word">
 					  <input type="submit" class="btn btn-warning" href="/" value="POST a new word" >
 				  </form>
@@ -71,7 +71,7 @@
 				  <% if (result == 'norm') { %><p><span class="label label-danger">Failure</span></p><% } %>
 				  <% if (result == 'rm' || result == 'norm') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
 				  <% if (position !== -1 && (result == 'rm' || result == 'norm')) { %><p><%- 'Position: ' + position %></p><% } %>
-				  <form class="form" action="/delete_word" method="GET">
+				  <form class="form" action="/words/delete" method="GET">
 					  <input type="text" name="word" placeholder="word">
 					  <input type="submit" class="btn btn-danger" href="/" value="DELETE a word" >
 				  </form>

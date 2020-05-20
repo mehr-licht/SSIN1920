@@ -149,70 +149,64 @@ app.get('/words', (req, res) => {
 });
 
 /**
- * Route HTTP GET request to obtain a word from Words API (Protected Resource).
- */
-app.get('/get_word', (req, res) => {
-  const headers = {
-    Authorization: `Bearer ${accessToken}`,
-    'Content-Type': 'application/x-www-form-urlencoded',
-  };
+     * Route HTTP GET request to Words API (Protected Resource).
+     */
+app.get('/words/:operation', (req, res) => {
+  if (req.params.operation === 'read') {
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
 
-  const resource = request('GET', wordApiEndpoint,
-    { headers, qs: req.query });
+    const resource = request('GET', wordApiEndpoint,
+      { headers, qs: req.query });
 
-  if (resource.statusCode >= 200 && resource.statusCode < 300) {
-    const body = JSON.parse(resource.getBody());
-    res.render('words', { word: body.word, position: body.position, result: body.result });
-  } else if (resource.statusCode === 401 || resource.statusCode === 403) {
-    res.render('error', { error: `Server returned response code: ${resource.statusCode}` });
-  } else {
-    res.render('words', { word: '', position: -1, result: 'noget' });
+    if (resource.statusCode >= 200 && resource.statusCode < 300) {
+      const body = JSON.parse(resource.getBody());
+      res.render('words', { word: body.word, position: body.position, result: body.result });
+    } else if (resource.statusCode === 401 || resource.statusCode === 403) {
+      res.render('error', { error: `Server returned response code: ${resource.statusCode}` });
+    } else {
+      res.render('words', { word: '', position: -1, result: 'noget' });
+    }
   }
-});
+  if (req.params.operation === 'add') {
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
 
-/**
- * Route HTTP GET request to add a word to Words API (Protected Resource).
- */
-app.get('/add_word', (req, res) => {
-  const headers = {
-    Authorization: `Bearer ${accessToken}`,
-    'Content-Type': 'application/x-www-form-urlencoded',
-  };
+    const formBody = qs.stringify({ word: req.query.word });
 
-  const formBody = qs.stringify({ word: req.query.word });
+    const resource = request('POST', wordApiEndpoint,
+      { headers, body: formBody });
 
-  const resource = request('POST', wordApiEndpoint,
-    { headers, body: formBody });
-
-  if (resource.statusCode >= 200 && resource.statusCode < 300) {
-    const body = JSON.parse(resource.getBody());
-    res.render('words', { word: body.word, position: body.position, result: 'add' });
-  } else if (resource.statusCode === 401 || resource.statusCode === 403) {
-    res.render('error', { error: `Server returned response code: ${resource.statusCode}` });
-  } else {
-    res.render('words', { word: '', position: -1, result: 'noadd' });
+    if (resource.statusCode >= 200 && resource.statusCode < 300) {
+      const body = JSON.parse(resource.getBody());
+      res.render('words', { word: body.word, position: body.position, result: 'add' });
+    } else if (resource.statusCode === 401 || resource.statusCode === 403) {
+      res.render('error', { error: `Server returned response code: ${resource.statusCode}` });
+    } else {
+      res.render('words', { word: '', position: -1, result: 'noadd' });
+    }
   }
-});
+  if (req.params.operation === 'delete') {
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
 
-/**
- * Route HTTP GET request to delete a word from Words API (Protected Resource).
- */
-app.get('/delete_word', (req, res) => {
-  const headers = {
-    Authorization: `Bearer ${accessToken}`,
-    'Content-Type': 'application/x-www-form-urlencoded',
-  };
+    const resource = request('DELETE', wordApiEndpoint,
+      { headers, qs: req.query });
 
-  const resource = request('DELETE', wordApiEndpoint,
-    { headers, qs: req.query });
-
-  if (resource.statusCode >= 200 && resource.statusCode < 300) {
-    const body = JSON.parse(resource.getBody());
-    res.render('words', { word: body.word, position: body.position, result: body.result });
-  } else if (resource.statusCode === 401 || resource.statusCode === 403) {
-    res.render('error', { error: `Server returned response code: ${resource.statusCode}` });
-  } else {
-    res.render('words', { word: '', position: -1, result: 'norm' });
+    if (resource.statusCode >= 200 && resource.statusCode < 300) {
+      const body = JSON.parse(resource.getBody());
+      res.render('words', { word: body.word, position: body.position, result: body.result });
+    } else if (resource.statusCode === 401 || resource.statusCode === 403) {
+      res.render('error', { error: `Server returned response code: ${resource.statusCode}` });
+    } else {
+      res.render('words', { word: '', position: -1, result: 'norm' });
+    }
   }
 });
 
