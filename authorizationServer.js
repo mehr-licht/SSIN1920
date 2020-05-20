@@ -55,8 +55,8 @@ usersDb.count({}, (err, count) => {
  * Authorization server information for authorization.
  */
 const authServer = {
-  authorizationEndpoint: 'http://localhost:9001/authorize',
-  tokenEndpoint: 'http://localhost:9001/token',
+  authorization_endpoint: 'http://localhost:9001/authorize',
+  token_endpoint: 'http://localhost:9001/token',
 };
 
 /**

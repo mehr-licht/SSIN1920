@@ -43,7 +43,7 @@ const protectedResources = {
  * Authorization server information for introspection.
  */
 const authServer = {
-  introspectionEndpoint: 'http://localhost:9001/introspect',
+  introspection_endpoint: 'http://localhost:9001/introspect',
 };
 
 /**
@@ -73,7 +73,7 @@ const getAccessToken = (req, res, next) => {
     Authorization: `Basic ${Buffer.from(`${querystring.escape(protectedResources.resource_id)}:${querystring.escape(protectedResources.resource_secret)}`).toString('base64')}`,
   };
 
-  const introspectionResponse = request('POST', authServer.introspectionEndpoint,
+  const introspectionResponse = request('POST', authServer.introspection_endpoint,
     {
       body: formData,
       headers,

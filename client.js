@@ -1,18 +1,20 @@
-var express = require("express");
-var bodyParser = require('body-parser');
-var request = require("sync-request");
-var url = require("url");
-var qs = require("qs");
-var querystring = require('querystring');
-var cons = require('consolidate');
-var randomstring = require("randomstring");
-var jose = require('jsrsasign');
-var base64url = require('base64url');
-var __ = require('underscore');
+const express = require('express');
+const bodyParser = require('body-parser');
+const request = require('sync-request');
+const url = require('url');
+const qs = require('qs');
+const querystring = require('querystring');
+const cons = require('consolidate');
+// eslint-disable-next-line no-underscore-dangle
+const __ = require('underscore');
 __.string = require('underscore.string');
 
 
-var app = express();
+/**
+ * Set Express web application.
+ * @type {app}
+ */
+const app = express();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -21,293 +23,258 @@ app.engine('html', cons.underscore);
 app.set('view engine', 'html');
 app.set('views', 'files/client');
 
-// client information
-
-var client = {
-	"client_id": "oauth-client",
-	"client_secret": "oauth-client-secret",
-	"redirect_uris": ["http://localhost:9000/callback"],
-	"scope": "read write delete"
+/**
+ * Client information.
+ */
+const client = {
+  client_id: 'oauth-client',
+  client_secret: 'oauth-client-secret',
+  redirect_uris: ['http://localhost:9000/callback'],
+  scope: 'read write delete',
 };
 
-// authorization server information
-var authServer = {
-	authorizationEndpoint: 'http://localhost:9001/authorize',
-	tokenEndpoint: 'http://localhost:9001/token',
-	revocationEndpoint: 'http://localhost:9001/revoke'
+/**
+ * Authorization server information for authorization.
+ */
+const authServer = {
+  authorization_endpoint: 'http://localhost:9001/authorize',
+  token_endpoint: 'http://localhost:9001/token',
+  revocation_endpoint: 'http://localhost:9001/revoke',
 };
 
-var wordApi = 'http://localhost:9002/words';
+/**
+ * Words API resource endpoint.
+ */
+const wordApi = 'http://localhost:9002/words';
 
-var state = null;
+const state = null;
 
-var access_token = null;
-var refresh_token = null;
-var scope = null;
-var id_token = null;
-var userInfo = null;
+let accessToken = null;
+let refreshToken = null;
+let scope = null;
 
-app.get('/', function (req, res) {
-	res.render('index', {access_token: access_token, refresh_token: refresh_token, scope: scope});
+/**
+ * Route HTTP GET request to client root.
+ */
+app.get('/', (req, res) => {
+  res.render('index', { access_token: accessToken, refresh_token: refreshToken, scope });
 });
 
-// app.get('/authorize', function(req, res){
-//
-// 	access_token = null;
-// 	refresh_token = null;
-// 	scope = null;
-// 	state = randomstring.generate();
-//
-// 	var authorizeUrl = buildUrl(authServer.authorizationEndpoint, {
-// 		response_type: 'code',
-// 		scope: client.scope,
-// 		client_id: client.client_id,
-// 		redirect_uri: client.redirect_uris[0],
-// 		state: state
-// 	});
-//
-// 	console.log("redirect", authorizeUrl);
-// 	res.redirect(authorizeUrl);
-// });
 
-app.get('/authorize', function(req, res) {
-	// this renders the username/password form
-	res.render('login');
-	return;
+/**
+ * Route HTTP GET request to the login form.
+ */
+app.get('/authorize', (req, res) => {
+  res.render('login');
 });
 
-app.post('/login', function(req, res) {
-	var username = req.body.username;
-	var password = req.body.password;
+/**
+ * Route HTTP POST request to server root.
+ */
+app.post('/login', (req, res) => {
+  const { username } = req.body;
+  const { password } = req.body;
 
-	var form_data = qs.stringify({
-		grant_type: 'password',
-		username: username,
-		password: password,
-		scope: client.scope
-	});
+  const form_data = qs.stringify({
+    grant_type: 'password',
+    username,
+    password,
+    scope: client.scope,
+  });
 
-	var headers = {
-		'Content-Type': 'application/x-www-form-urlencoded',
-		'Authorization': 'Basic ' + encodeClientCredentials(client.client_id, client.client_secret)
-	};
+  const headers = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    Authorization: `Basic ${encodeClientCredentials(client.client_id, client.client_secret)}`,
+  };
 
-	var tokRes = request('POST', authServer.tokenEndpoint, {
-		body: form_data,
-		headers: headers
-	});
+  const tokRes = request('POST', authServer.token_endpoint, {
+    body: form_data,
+    headers,
+  });
 
-	if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
-		var body = JSON.parse(tokRes.getBody());
+  if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
+    const body = JSON.parse(tokRes.getBody());
 
-		access_token = body.access_token;
+    accessToken = body.access_token;
 
-		scope = body.scope;
+    scope = body.scope;
 
-		refresh_token = body.refresh_token;
+    refreshToken = body.refresh_token;
 
-		res.render('index', {access_token: access_token, refresh_token: refresh_token, scope: scope});
-	} else {
-		res.render('error', {error: 'Unable to fetch access token, server response: ' + tokRes.statusCode})
-	}
+    res.render('index', { access_token: accessToken, refresh_token: refreshToken, scope });
+  } else {
+    res.render('error', { error: `Unable to fetch access token, server response: ${tokRes.statusCode}` });
+  }
 });
 
-app.get("/callback", function(req, res){
+app.get('/callback', (req, res) => {
+  if (req.query.error) {
+    // it's an error response, act accordingly
+    res.render('error', { error: req.query.error });
+    return;
+  }
 
-	if (req.query.error) {
-		// it's an error response, act accordingly
-		res.render('error', {error: req.query.error});
-		return;
-	}
-	
-	var resState = req.query.state;
-	if (resState == state) {
-		console.log('State value matches: expected %s got %s', state, resState);
-	} else {
-		console.log('State DOES NOT MATCH: expected %s got %s', state, resState);
-		res.render('error', {error: 'State value did not match'});
-		return;
-	}
+  const resState = req.query.state;
+  if (resState == state) {
+    console.log('State value matches: expected %s got %s', state, resState);
+  } else {
+    console.log('State DOES NOT MATCH: expected %s got %s', state, resState);
+    res.render('error', { error: 'State value did not match' });
+    return;
+  }
 
-	var code = req.query.code;
+  const { code } = req.query;
 
-	var form_data = qs.stringify({
-				grant_type: 'authorization_code',
-				code: code,
-				redirect_uri: client.redirect_uris[0]
-			});
-	var headers = {
-		'Content-Type': 'application/x-www-form-urlencoded',
-		'Authorization': 'Basic ' + encodeClientCredentials(client.client_id, client.client_secret)
-	};
+  const form_data = qs.stringify({
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: client.redirect_uris[0],
+  });
+  const headers = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    Authorization: `Basic ${encodeClientCredentials(client.client_id, client.client_secret)}`,
+  };
 
-	var tokRes = request('POST', authServer.tokenEndpoint, 
-		{	
-			body: form_data,
-			headers: headers
-		}
-	);
+  const tokRes = request('POST', authServer.token_endpoint,
+    {
+      body: form_data,
+      headers,
+    });
 
-	console.log('Requesting access token for code %s',code);
-	
-	if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
-		var body = JSON.parse(tokRes.getBody());
-	
-		access_token = body.access_token;
-		console.log('Got access token: %s', access_token);
-		if (body.refresh_token) {
-			refresh_token = body.refresh_token;
-			console.log('Got refresh token: %s', refresh_token);
-		}
-		
-		scope = body.scope;
-		console.log('Got scope: %s', scope);
+  console.log('Requesting access token for code %s', code);
 
-		res.render('index', {access_token: access_token, refresh_token: refresh_token, scope: scope});
+  if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
+    const body = JSON.parse(tokRes.getBody());
 
-	} else {
-		res.render('error', {error: 'Unable to fetch access token, server response: ' + tokRes.statusCode})
-	}
+    accessToken = body.access_token;
+    console.log('Got access token: %s', accessToken);
+    if (body.refresh_token) {
+      refreshToken = body.refresh_token;
+      console.log('Got refresh token: %s', refreshToken);
+    }
+
+    scope = body.scope;
+    console.log('Got scope: %s', scope);
+
+    res.render('index', { access_token: accessToken, refresh_token: refreshToken, scope });
+  } else {
+    res.render('error', { error: `Unable to fetch access token, server response: ${tokRes.statusCode}` });
+  }
 });
 
-app.post('/revoke', function(req, res) {
-	var form_data = qs.stringify({
-		token: refresh_token
-	});
-	var headers = {
-		'Content-Type': 'application/x-www-form-urlencoded',
-		'Authorization': 'Basic ' + encodeClientCredentials(client.client_id, client.client_secret)
-	};
-	console.log('Revoking token %s', refresh_token);
-	var tokRes = request('POST', authServer.revocationEndpoint, {
-		body: form_data,
-		headers: headers
-	});
-	
-	access_token = null;
-	refresh_token = null;
-	scope = null;
-	
-	if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
-		res.render('index', {access_token: access_token, refresh_token: refresh_token, scope: scope});
-		return;
-	} else {
-		res.render('error', {error: tokRes.statusCode});
-		return;
-	}
+app.post('/revoke', (req, res) => {
+  const form_data = qs.stringify({
+    token: refreshToken,
+  });
+  const headers = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    Authorization: `Basic ${encodeClientCredentials(client.client_id, client.client_secret)}`,
+  };
+  console.log('Revoking token %s', refreshToken);
+  const tokRes = request('POST', authServer.revocation_endpoint, {
+    body: form_data,
+    headers,
+  });
+
+  accessToken = null;
+  refreshToken = null;
+  scope = null;
+
+  if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
+    res.render('index', { access_token: accessToken, refresh_token: refreshToken, scope });
+  } else {
+    res.render('error', { error: tokRes.statusCode });
+  }
 });
 
-app.get('/words', function (req, res) {
-	res.render('words', {word: '', position: -1, result: ''});
-	return;
+app.get('/words', (req, res) => {
+  res.render('words', { word: '', position: -1, result: '' });
 });
 
-app.get('/get_word', function (req, res) {
+app.get('/get_word', (req, res) => {
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/x-www-form-urlencoded',
+  };
 
-	var headers = {
-		'Authorization': 'Bearer ' + access_token,
-		'Content-Type': 'application/x-www-form-urlencoded'
-	};
+  const resource = request('GET', wordApi,
+    { headers, qs: req.query });
 
-	var resource = request('GET', wordApi,
-		{headers: headers, qs: req.query}
-	);
-
-	if (resource.statusCode >= 200 && resource.statusCode < 300) {
-		var body = JSON.parse(resource.getBody());
-		res.render('words', {word: body.word, position: body.position, result: body.result});
-		return;
-	} else if (resource.statusCode === 401 || resource.statusCode === 403){
-		res.render('error', {error: 'Server returned response code: ' + resource.statusCode});
-	} else {
-		res.render('words', {word: '', position: -1, result: 'noget'});
-		return;
-	}
-
-
-
+  if (resource.statusCode >= 200 && resource.statusCode < 300) {
+    const body = JSON.parse(resource.getBody());
+    res.render('words', { word: body.word, position: body.position, result: body.result });
+  } else if (resource.statusCode === 401 || resource.statusCode === 403) {
+    res.render('error', { error: `Server returned response code: ${resource.statusCode}` });
+  } else {
+    res.render('words', { word: '', position: -1, result: 'noget' });
+  }
 });
 
-app.get('/add_word', function (req, res) {
+app.get('/add_word', (req, res) => {
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/x-www-form-urlencoded',
+  };
 
-	var headers = {
-		'Authorization': 'Bearer ' + access_token,
-		'Content-Type': 'application/x-www-form-urlencoded'
-	};
+  const form_body = qs.stringify({ word: req.query.word });
 
-	var form_body = qs.stringify({word: req.query.word});
+  const resource = request('POST', wordApi,
+    { headers, body: form_body });
 
-	var resource = request('POST', wordApi,
-		{headers: headers, body: form_body}
-	);
-
-	if (resource.statusCode >= 200 && resource.statusCode < 300) {
-		var body = JSON.parse(resource.getBody());
-		res.render('words', {word: body.word, position: body.position, result: 'add'});
-		return;
-	} else if (resource.statusCode === 401 || resource.statusCode === 403){
-		res.render('error', {error: 'Server returned response code: ' + resource.statusCode});
-
-	} else {
-		res.render('words', {word: '', position: -1, result: 'noadd'});
-		return;
-	}
-
-
+  if (resource.statusCode >= 200 && resource.statusCode < 300) {
+    const body = JSON.parse(resource.getBody());
+    res.render('words', { word: body.word, position: body.position, result: 'add' });
+  } else if (resource.statusCode === 401 || resource.statusCode === 403) {
+    res.render('error', { error: `Server returned response code: ${resource.statusCode}` });
+  } else {
+    res.render('words', { word: '', position: -1, result: 'noadd' });
+  }
 });
 
-app.get('/delete_word', function (req, res) {
+app.get('/delete_word', (req, res) => {
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/x-www-form-urlencoded',
+  };
 
-	var headers = {
-		'Authorization': 'Bearer ' + access_token,
-		'Content-Type': 'application/x-www-form-urlencoded'
-	};
+  const resource = request('DELETE', wordApi,
+    { headers, qs: req.query });
 
-	var resource = request('DELETE', wordApi,
-		{headers: headers, qs: req.query}
-	);
-
-	if (resource.statusCode >= 200 && resource.statusCode < 300) {
-		var body = JSON.parse(resource.getBody());
-		res.render('words', {word: body.word, position: body.position, result: body.result});
-		return;
-	} else if (resource.statusCode === 401 || resource.statusCode === 403){
-		res.render('error', {error: 'Server returned response code: ' + resource.statusCode});
-	} else {
-		res.render('words', {word: '', position: -1, result: 'norm'});
-		return;
-	}
-
-
+  if (resource.statusCode >= 200 && resource.statusCode < 300) {
+    const body = JSON.parse(resource.getBody());
+    res.render('words', { word: body.word, position: body.position, result: body.result });
+  } else if (resource.statusCode === 401 || resource.statusCode === 403) {
+    res.render('error', { error: `Server returned response code: ${resource.statusCode}` });
+  } else {
+    res.render('words', { word: '', position: -1, result: 'norm' });
+  }
 });
-
 
 
 app.use('/', express.static('files/client'));
 
-var buildUrl = function(base, options, hash) {
-	var newUrl = url.parse(base, true);
-	delete newUrl.search;
-	if (!newUrl.query) {
-		newUrl.query = {};
-	}
-	__.each(options, function(value, key, list) {
-		newUrl.query[key] = value;
-	});
-	if (hash) {
-		newUrl.hash = hash;
-	}
+const buildUrl = function (base, options, hash) {
+  const newUrl = url.parse(base, true);
+  delete newUrl.search;
+  if (!newUrl.query) {
+    newUrl.query = {};
+  }
+  __.each(options, (value, key, list) => {
+    newUrl.query[key] = value;
+  });
+  if (hash) {
+    newUrl.hash = hash;
+  }
 
-	return url.format(newUrl);
+  return url.format(newUrl);
 };
 
-var encodeClientCredentials = function(clientId, clientSecret) {
-	return new Buffer.from(querystring.escape(clientId) + ':' + querystring.escape(clientSecret)).toString('base64');
+var encodeClientCredentials = function (clientId, clientSecret) {
+  return new Buffer.from(`${querystring.escape(clientId)}:${querystring.escape(clientSecret)}`).toString('base64');
 };
 
-var server = app.listen(9000, 'localhost', function () {
-  var host = server.address().address;
-  var port = server.address().port;
+var server = app.listen(9000, 'localhost', () => {
+  const host = server.address().address;
+  const { port } = server.address();
   console.log('OAuth Client listening at http://%s:%s', host, port);
 });
- 
