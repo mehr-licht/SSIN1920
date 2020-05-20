@@ -16,7 +16,7 @@ __.string = require('underscore.string');
 
 
 /**
- * Set Express web application
+ * Set Express web application.
  * @type {app}
  */
 const app = express();
@@ -30,7 +30,7 @@ app.set('views', 'files/authorizationServer');
 app.set('json spaces', 4);
 
 /**
- * Init Users database in case it does not exist
+ * Init Users database in case it does not exist.
  */
 usersDb.count({}, (err, count) => {
   if (!count) {
@@ -53,7 +53,7 @@ usersDb.count({}, (err, count) => {
 });
 
 /**
- * Authorization server information
+ * Authorization server information.
  */
 const authServer = {
   authorizationEndpoint: 'http://localhost:9001/authorize',
@@ -61,7 +61,7 @@ const authServer = {
 };
 
 /**
- * Client information
+ * Client information.
  */
 const clients = [
 
@@ -74,7 +74,7 @@ const clients = [
 ];
 
 /**
- * Protected resource information
+ * Protected resource information.
  */
 const protectedResources = [
   {
@@ -84,26 +84,31 @@ const protectedResources = [
 ];
 
 /**
- * Get client by ID
+ * Get client by ID.
  * @param clientId
  */
 const getClient = (clientId) => __.find(clients, (client) => client.client_id === clientId);
 
 /**
- * Get resource by ID
+ * Get resource by ID.
  * @param resourceId
  */
 const getProtectedResource = (resourceId) => __.find(protectedResources,
   (resource) => resource.resource_id === resourceId);
 
+/**
+ * Route HTTP GET request to server root.
+ */
 app.get('/', (req, res) => {
   res.render('index', { clients, authServer });
 });
 
+/**
+ * Route HTTP POST request to obtain a user access token or a refresh token.
+ */
 app.post('/token', (req, res) => {
   const auth = req.headers.authorization;
   if (auth) {
-    // check the auth header
     const clientCredentials = decodeClientCredentials(auth);
     var clientId = clientCredentials.id;
     var clientSecret = clientCredentials.secret;
@@ -239,7 +244,7 @@ app.post('/revoke', (req, res) => {
 
 app.post('/introspect', (req, res) => {
   const auth = req.headers.authorization;
-  const resourceCredentials = new Buffer.from(auth.slice('basic '.length), 'base64').toString().split(':');
+  const resourceCredentials = new Buffer.from(auth.slice('Basic '.length), 'base64').toString().split(':');
   const resourceId = querystring.unescape(resourceCredentials[0]);
   const resourceSecret = querystring.unescape(resourceCredentials[1]);
 
@@ -278,8 +283,14 @@ app.post('/introspect', (req, res) => {
   });
 });
 
-var decodeClientCredentials = function (auth) {
-  const clientCredentials = new Buffer.from(auth.slice('basic '.length), 'base64').toString().split(':');
+/**
+ * Decode credentials sent by the client.
+ *
+ * @param auth
+ * @returns {{id: string, secret: string}}
+ */
+const decodeClientCredentials = (auth) => {
+  const clientCredentials = Buffer.from(auth.slice('Basic '.length), 'base64').toString().split(':');
   const clientId = querystring.unescape(clientCredentials[0]);
   const clientSecret = querystring.unescape(clientCredentials[1]);
   return { id: clientId, secret: clientSecret };
