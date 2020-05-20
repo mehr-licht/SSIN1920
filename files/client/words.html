@@ -41,10 +41,10 @@
 		  <div class="col-md-4">
 			  <div class="well">
 				  <h3>Read word from the list</h3>
-				  <% if (result == 'get') { %><p><span class="label label-success">Success</span></p><% } %>
-				  <% if (result == 'noget') { %><p><span class="label label-danger">Failure</span></p><% } %>
-				  <% if (result == 'get' || result == 'noget') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
-				  <% if (position !== -1 && (result == 'get' || result == 'noget')) { %><p><%- 'Position: ' + position %></p><% } %>
+				  <% if (result == 'read') { %><p><span class="label label-success">Success</span></p><% } %>
+				  <% if (result == 'read-failed') { %><p><span class="label label-danger">Failure</span></p><% } %>
+				  <% if (result == 'read' || result == 'read-failed') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
+				  <% if (position !== -1 && (result == 'read' || result == 'read-failed')) { %><p><%- 'Position: ' + position %></p><% } %>
 				  <form class="form" action="/words/read" method="GET">
 					  <input type="text" name="word" placeholder="word">
 					  <input type="submit" class="btn btn-info" href="/" value="GET a new word" >
@@ -54,11 +54,11 @@
 		  <div class="col-md-4">
 			  <div class="well">
 				  <h3>Add a word to the list</h3>
-				  <% if (result == 'add') { %><p><span class="label label-success">Success</span></p><% } %>
-				  <% if (result == 'noadd') { %><p><span class="label label-danger">Failure</span></p><% } %>
-				  <% if (result == 'add' || result == 'noadd') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
-				  <% if (position !== -1 && (result == 'add' || result == 'noadd')) { %><p><%- 'Position: ' + position %></p><% } %>
-				  <form class="form" action="/words/add" method="GET">
+				  <% if (result == 'write') { %><p><span class="label label-success">Success</span></p><% } %>
+				  <% if (result == 'write-failed') { %><p><span class="label label-danger">Failure</span></p><% } %>
+				  <% if (result == 'write' || result == 'write-failed') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
+				  <% if (position !== -1 && (result == 'write' || result == 'write-failed')) { %><p><%- 'Position: ' + position %></p><% } %>
+				  <form class="form" action="/words/write" method="GET">
 					  <input type="text" name="word" placeholder="word">
 					  <input type="submit" class="btn btn-warning" href="/" value="POST a new word" >
 				  </form>
@@ -67,10 +67,10 @@
 		  <div class="col-md-4">
 			  <div class="well">
 				  <h3>Remove a word from the list</h3>
-				  <% if (result == 'rm') { %><p><span class="label label-success">Success</span></p><% } %>
-				  <% if (result == 'norm') { %><p><span class="label label-danger">Failure</span></p><% } %>
-				  <% if (result == 'rm' || result == 'norm') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
-				  <% if (position !== -1 && (result == 'rm' || result == 'norm')) { %><p><%- 'Position: ' + position %></p><% } %>
+				  <% if (result == 'delete') { %><p><span class="label label-success">Success</span></p><% } %>
+				  <% if (result == 'delete-failed') { %><p><span class="label label-danger">Failure</span></p><% } %>
+				  <% if (result == 'delete' || result == 'delete-failed') { %><p><%- word ? 'Word: ' + word : '' %></p><% } %>
+				  <% if (position !== -1 && (result == 'delete' || result == 'delete-failed')) { %><p><%- 'Position: ' + position %></p><% } %>
 				  <form class="form" action="/words/delete" method="GET">
 					  <input type="text" name="word" placeholder="word">
 					  <input type="submit" class="btn btn-danger" href="/" value="DELETE a word" >

@@ -120,9 +120,9 @@ app.get('/words', getAccessToken, requireAccessToken, (req, res) => {
   if (__.contains(req.access_token.scope.split(' '), 'read')) {
     const position = savedWords.indexOf(req.query.word);
     if (position >= 0) {
-      res.json({ word: req.query.word, position, result: 'get' });
+      res.json({ word: req.query.word, position, result: 'read' });
     } else {
-      res.json({ word: req.query.word, position: -1, result: 'noget' });
+      res.json({ word: req.query.word, position: -1, result: 'read-failed' });
     }
   } else {
     res.set('WWW-Authenticate', 'Bearer realm=localhost:9002, error="insufficient_scope", scope="read"'); // see rfc6750
@@ -138,10 +138,10 @@ app.post('/words', getAccessToken, requireAccessToken, (req, res) => {
     if (req.body.word) {
       savedWords.push(req.body.word);
       const position = savedWords.indexOf(req.body.word);
-      res.json({ word: req.body.word, position, result: 'add' });
+      res.json({ word: req.body.word, position, result: 'write' });
       res.status(201).end();
     } else {
-      res.json({ word: req.body.word, position: -1, result: 'noadd' });
+      res.json({ word: req.body.word, position: -1, result: 'write-failed' });
     }
   } else {
     res.set('WWW-Authenticate', 'Bearer realm=localhost:9002, error="insufficient_scope", scope="write"');
@@ -156,11 +156,11 @@ app.delete('/words', getAccessToken, requireAccessToken, (req, res) => {
   if (__.contains(req.access_token.scope.split(' '), 'delete')) {
     const position = savedWords.indexOf(req.query.word);
     if (position >= 0) {
-      res.json({ word: req.query.word, position, result: 'rm' });
+      res.json({ word: req.query.word, position, result: 'delete' });
       savedWords.pop();
       res.status(201).end();
     } else {
-      res.json({ word: req.query.word, position: -1, result: 'norm' });
+      res.json({ word: req.query.word, position: -1, result: 'delete-failed' });
     }
   } else {
     res.set('WWW-Authenticate', 'Bearer realm=localhost:9002, error="insufficient_scope", scope="delete"');
