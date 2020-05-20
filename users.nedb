@@ -1,2 +1,4 @@
-{"username":"bob","password":"my_secret_password","scope":"read","_id":"VOAz47rlcVghD9AU"}
-{"username":"alice","password":"password","scope":"read write delete","_id":"znCywj4fa1OEP8pe"}
+{"username":"bob","password":"123456","scope":"read","_id":"C9FaAnliWEtFWpYV"}
+{"username":"eve","password":"1q2w3e4r","scope":"","_id":"G6LHH1ygnyysX8GD"}
+{"username":"alice","password":"password","scope":"read write delete","_id":"H5iot1bwJZpOlxeD"}
+{"username":"chuck","password":"qwerty","scope":"write delete","_id":"zSQYKPWjXfUG68uH"}

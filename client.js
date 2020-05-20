@@ -217,7 +217,7 @@ app.get('/get_word', function (req, res) {
 		var body = JSON.parse(resource.getBody());
 		res.render('words', {word: body.word, position: body.position, result: body.result});
 		return;
-	} else if (resource.statusCode === 403){
+	} else if (resource.statusCode === 401 || resource.statusCode === 403){
 		res.render('error', {error: 'Server returned response code: ' + resource.statusCode});
 	} else {
 		res.render('words', {word: '', position: -1, result: 'noget'});
@@ -245,7 +245,7 @@ app.get('/add_word', function (req, res) {
 		var body = JSON.parse(resource.getBody());
 		res.render('words', {word: body.word, position: body.position, result: 'add'});
 		return;
-	} else if (resource.statusCode === 403){
+	} else if (resource.statusCode === 401 || resource.statusCode === 403){
 		res.render('error', {error: 'Server returned response code: ' + resource.statusCode});
 
 	} else {
@@ -271,7 +271,7 @@ app.get('/delete_word', function (req, res) {
 		var body = JSON.parse(resource.getBody());
 		res.render('words', {word: body.word, position: body.position, result: body.result});
 		return;
-	} else if (resource.statusCode === 403){
+	} else if (resource.statusCode === 401 || resource.statusCode === 403){
 		res.render('error', {error: 'Server returned response code: ' + resource.statusCode});
 	} else {
 		res.render('words', {word: '', position: -1, result: 'norm'});

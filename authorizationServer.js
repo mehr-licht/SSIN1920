@@ -25,17 +25,25 @@ app.set('views', 'files/authorizationServer');
 app.set('json spaces', 4);
 
 /**
- * Init Users database
+ * Init Users database in case it does not exist
  */
 usersDb.count({}, (err, count) => {
   if (!count) {
     usersDb.insert(
       [
         { username: 'alice', password: 'password', scope: 'read write delete' },
-        { username: 'bob', password: 'my_secret_password', scope: 'read' },
-      ], (err, docs) => {
+        { username: 'bob', password: '123456', scope: 'read' },
+        { username: 'chuck', password: 'qwerty', scope: 'write delete' },
+        { username: 'eve', password: '1q2w3e4r', scope: '' },
+      ], (errInsert) => {
+        if (errInsert) {
+          console.error(errInsert);
+        }
       },
     );
+  }
+  if (err) {
+    console.error(err);
   }
 });
 
@@ -234,12 +242,11 @@ app.post('/introspect', (req, res) => {
     return;
   }
 
-  const { token } = req.body;
-  console.log('Introspecting token %s', token);
+  const { intToken } = req.body;
+  console.log('Introspecting token %s', intToken);
   tokenDb.find({ access_token: req.body.token }, (err, token) => {
-    if (token) {
+    if (token.length > 0) {
       console.log('We found a matching token: %s', req.body.token);
-
       var introspectionResponse = {};
       introspectionResponse.active = true;
       introspectionResponse.iss = 'http://localhost:9001/';
@@ -252,7 +259,7 @@ app.post('/introspect', (req, res) => {
 
       var introspectionResponse = {};
       introspectionResponse.active = false;
-      res.status(200).json(introspectionResponse);
+      res.status(401).json(introspectionResponse);
     }
   });
 });
