@@ -14,7 +14,6 @@ const
 const
   usersDb = new Datastore({ filename: './users.nedb', autoload: true });
 
-
 /**
  * Set Express web application.
  * @type {app}
@@ -53,7 +52,7 @@ usersDb.count({}, (err, count) => {
 });
 
 /**
- * Authorization server information.
+ * Authorization server information for authorization.
  */
 const authServer = {
   authorizationEndpoint: 'http://localhost:9001/authorize',
@@ -284,18 +283,18 @@ app.post('/introspect', (req, res) => {
     return;
   }
 
-  const { intToken } = req.body;
-  console.log('Introspecting token %s', intToken);
+  const { token } = req.body;
+  console.log('Introspecting token %s', token);
 
-  tokenDb.find({ access_token: req.body.token }, (err, token) => {
+  tokenDb.find({ access_token: req.body.token }, (err, accessToken) => {
     let introspectionResponse = {};
 
-    if (token.length > 0) {
+    if (accessToken.length > 0) {
       console.log('We found a matching token: %s', req.body.token);
       introspectionResponse.active = true;
       introspectionResponse.issuer = 'http://localhost:9001/';
-      introspectionResponse.scope = token[0].scope.join(' ');
-      introspectionResponse.client_id = token[0].client_id;
+      introspectionResponse.scope = accessToken[0].scope.join(' ');
+      introspectionResponse.client_id = accessToken[0].client_id;
 
       res.status(200).json(introspectionResponse);
     } else {
@@ -309,13 +308,13 @@ app.post('/introspect', (req, res) => {
 });
 
 /**
- * Middleware function mount point for server
+ * Middleware function mount point for server.
  */
 app.use('/', express.static('files/authorizationServer'));
 
 
 /**
- * Delete token database entries
+ * Delete token database entries.
  */
 tokenDb.remove({}, { multi: true });
 

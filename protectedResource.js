@@ -8,6 +8,10 @@ const request = require('sync-request');
 const __ = require('underscore');
 const cors = require('cors');
 
+/**
+ * Set Express web application.
+ * @type {app}
+ */
 const app = express();
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -17,14 +21,27 @@ app.set('view engine', 'html');
 app.set('views', 'files/protectedResource');
 app.set('json spaces', 4);
 
+/**
+ * Middleware function mount point for server.
+ */
 app.use('/', express.static('files/protectedResource'));
+
+/**
+ * Enable All CORS Requests.
+ */
 app.use(cors());
 
+/**
+ * Protected resource information.
+ */
 const protectedResources = {
   resource_id: 'protected-resource',
   resource_secret: 'protected-resource-secret',
 };
 
+/**
+ * Authorization server information for introspection.
+ */
 const authServer = {
   introspectionEndpoint: 'http://localhost:9001/introspect',
 };
@@ -127,8 +144,10 @@ app.delete('/words', getAccessToken, requireAccessToken, (req, res) => {
   }
 });
 
-
-var server = app.listen(9002, 'localhost', () => {
+/**
+ * Set Express web application listening port.
+ */
+const server = app.listen(9002, 'localhost', () => {
   const host = server.address().address;
   const { port } = server.address();
 
