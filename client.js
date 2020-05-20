@@ -47,8 +47,6 @@ const authServer = {
  */
 const wordApiEndpoint = 'http://localhost:9002/words';
 
-const state = null;
-
 let accessToken = null;
 let refreshToken = null;
 let scope = null;
@@ -121,15 +119,6 @@ app.get('/callback', (req, res) => {
   if (req.query.error) {
     // it's an error response, act accordingly
     res.render('error', { error: req.query.error });
-    return;
-  }
-
-  const resState = req.query.state;
-  if (resState == state) {
-    console.log('State value matches: expected %s got %s', state, resState);
-  } else {
-    console.log('State DOES NOT MATCH: expected %s got %s', state, resState);
-    res.render('error', { error: 'State value did not match' });
     return;
   }
 
