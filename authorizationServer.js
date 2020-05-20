@@ -217,26 +217,30 @@ app.post('/token', (req, res) => {
   }
 });
 
+/**
+ * Route HTTP POST request to client tokens.
+ */
 app.post('/revoke', (req, res) => {
   const auth = req.headers.authorization;
+
+  let clientId;
+  let clientSecret;
+
   if (auth) {
-    // check the auth header
     const clientCredentials = decodeClientCredentials(auth);
-    var clientId = clientCredentials.id;
-    var clientSecret = clientCredentials.secret;
+    clientId = clientCredentials.id;
+    clientSecret = clientCredentials.secret;
   }
 
-  // otherwise, check the post body
   if (req.body.client_id) {
     if (clientId) {
-      // if we've already seen the client's credentials in the authorization header, this is an error
       console.log('Client attempted to authenticate with multiple methods');
       res.status(401).json({ error: 'invalid_client' });
       return;
     }
 
-    var clientId = req.body.client_id;
-    var clientSecret = req.body.client_secret;
+    clientId = req.body.client_id;
+    clientSecret = req.body.client_secret;
   }
 
   const client = getClient(clientId);
@@ -246,7 +250,7 @@ app.post('/revoke', (req, res) => {
     return;
   }
 
-  if (client.client_secret != clientSecret) {
+  if (client.client_secret !== clientSecret) {
     console.log('Mismatched client secret, expected %s got %s', client.client_secret, clientSecret);
     res.status(401).json({ error: 'invalid_client' });
     return;
@@ -258,9 +262,12 @@ app.post('/revoke', (req, res) => {
   });
 });
 
+/**
+ * Route HTTP POST request for token introspection.
+ */
 app.post('/introspect', (req, res) => {
   const auth = req.headers.authorization;
-  const resourceCredentials = new Buffer.from(auth.slice('Basic '.length), 'base64').toString().split(':');
+  const resourceCredentials = Buffer.from(auth.slice('Basic '.length), 'base64').toString().split(':');
   const resourceId = querystring.unescape(resourceCredentials[0]);
   const resourceSecret = querystring.unescape(resourceCredentials[1]);
 
@@ -271,7 +278,7 @@ app.post('/introspect', (req, res) => {
     return;
   }
 
-  if (resource.resource_secret != resourceSecret) {
+  if (resource.resource_secret !== resourceSecret) {
     console.log('Mismatched secret, expected %s got %s', resource.resource_secret, resourceSecret);
     res.status(401).end();
     return;
@@ -279,12 +286,14 @@ app.post('/introspect', (req, res) => {
 
   const { intToken } = req.body;
   console.log('Introspecting token %s', intToken);
+
   tokenDb.find({ access_token: req.body.token }, (err, token) => {
+    let introspectionResponse = {};
+
     if (token.length > 0) {
       console.log('We found a matching token: %s', req.body.token);
-      var introspectionResponse = {};
       introspectionResponse.active = true;
-      introspectionResponse.iss = 'http://localhost:9001/';
+      introspectionResponse.issuer = 'http://localhost:9001/';
       introspectionResponse.scope = token[0].scope.join(' ');
       introspectionResponse.client_id = token[0].client_id;
 
@@ -292,7 +301,7 @@ app.post('/introspect', (req, res) => {
     } else {
       console.log('No matching token was found.');
 
-      var introspectionResponse = {};
+      introspectionResponse = {};
       introspectionResponse.active = false;
       res.status(401).json(introspectionResponse);
     }
