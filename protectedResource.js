@@ -30,8 +30,8 @@ var resource = {
 
 
 var protectedResources = {
-		"resource_id": "protected-resource-1",
-		"resource_secret": "protected-resource-secret-1"
+		"resource_id": "protected-resource",
+		"resource_secret": "protected-resource-secret"
 };
 
 var authServer = {

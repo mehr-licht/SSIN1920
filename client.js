@@ -24,8 +24,8 @@ app.set('views', 'files/client');
 // client information
 
 var client = {
-	"client_id": "oauth-client-1",
-	"client_secret": "oauth-client-secret-1",
+	"client_id": "oauth-client",
+	"client_secret": "oauth-client-secret",
 	"redirect_uris": ["http://localhost:9000/callback"],
 	"scope": "read write delete"
 };

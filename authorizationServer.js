@@ -14,6 +14,11 @@ const querystring = require('querystring');
 const __ = require('underscore');
 __.string = require('underscore.string');
 
+
+/**
+ * Set Express web application
+ * @type {app}
+ */
 const app = express();
 
 app.use(bodyParser.json());
@@ -61,26 +66,35 @@ const authServer = {
 const clients = [
 
   {
-    client_id: 'oauth-client-1',
-    client_secret: 'oauth-client-secret-1',
+    client_id: 'oauth-client',
+    client_secret: 'oauth-client-secret',
     redirect_uris: ['http://localhost:9000/callback'],
     scope: 'read write delete',
   },
 ];
 
+/**
+ * Protected resource information
+ */
 const protectedResources = [
   {
-    resource_id: 'protected-resource-1',
-    resource_secret: 'protected-resource-secret-1',
+    resource_id: 'protected-resource',
+    resource_secret: 'protected-resource-secret',
   },
 ];
 
-
+/**
+ * Get client by ID
+ * @param clientId
+ */
 const getClient = (clientId) => __.find(clients, (client) => client.client_id === clientId);
 
-const getProtectedResource = function (resourceId) {
-  return __.find(protectedResources, (resource) => resource.resource_id == resourceId);
-};
+/**
+ * Get resource by ID
+ * @param resourceId
+ */
+const getProtectedResource = (resourceId) => __.find(protectedResources,
+  (resource) => resource.resource_id === resourceId);
 
 app.get('/', (req, res) => {
   res.render('index', { clients, authServer });
