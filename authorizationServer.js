@@ -2,6 +2,10 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const randomstring = require('randomstring');
 const cons = require('consolidate');
+const querystring = require('querystring');
+// eslint-disable-next-line no-underscore-dangle
+const __ = require('underscore');
+__.string = require('underscore.string');
 const Datastore = require('nedb');
 
 const
@@ -9,10 +13,6 @@ const
 
 const
   usersDb = new Datastore({ filename: './users.nedb', autoload: true });
-const querystring = require('querystring');
-// eslint-disable-next-line no-underscore-dangle
-const __ = require('underscore');
-__.string = require('underscore.string');
 
 
 /**
