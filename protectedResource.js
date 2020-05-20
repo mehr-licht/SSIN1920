@@ -46,40 +46,43 @@ const authServer = {
   introspectionEndpoint: 'http://localhost:9001/introspect',
 };
 
-
-const getAccessToken = function (req, res, next) {
-  // check the auth header first
+/**
+ * Get the access token from the HTTP headers.
+ * @param req
+ * @param res
+ * @param next
+ */
+const getAccessToken = (req, res, next) => {
   const auth = req.headers.authorization;
-  let inToken = null;
-  if (auth && auth.toLowerCase().indexOf('bearer') == 0) {
-    inToken = auth.slice('bearer '.length);
+  let token = null;
+
+  if (auth && auth.toLowerCase().indexOf('bearer') === 0) {
+    token = auth.slice('bearer '.length);
   } else if (req.body && req.body.access_token) {
-    // not in the header, check in the form body
-    inToken = req.body.access_token;
+    token = req.body.access_token;
   } else if (req.query && req.query.access_token) {
-    inToken = req.query.access_token;
+    token = req.query.access_token;
   }
 
-  console.log('Incoming token: %s', inToken);
+  console.log('Incoming token: %s', token);
 
-  const form_data = qs.stringify({
-    token: inToken,
-  });
+  const formData = qs.stringify({ token });
+
   const headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
-    Authorization: `Basic ${new Buffer.from(`${querystring.escape(protectedResources.resource_id)}:${querystring.escape(protectedResources.resource_secret)}`).toString('base64')}`,
+    Authorization: `Basic ${Buffer.from(`${querystring.escape(protectedResources.resource_id)}:${querystring.escape(protectedResources.resource_secret)}`).toString('base64')}`,
   };
 
-  const tokRes = request('POST', authServer.introspectionEndpoint,
+  const introspectionResponse = request('POST', authServer.introspectionEndpoint,
     {
-      body: form_data,
+      body: formData,
       headers,
     });
 
-  if (tokRes.statusCode >= 200 && tokRes.statusCode < 300) {
-    const body = JSON.parse(tokRes.getBody());
+  if (introspectionResponse.statusCode >= 200 && introspectionResponse.statusCode < 300) {
+    const body = JSON.parse(introspectionResponse.getBody());
 
-    console.log('Got introspection response', body);
+    console.log('Introspection response: ', body);
     const { active } = body;
     if (active) {
       req.access_token = body;
