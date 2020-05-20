@@ -91,7 +91,14 @@ const getAccessToken = (req, res, next) => {
   next();
 };
 
-const requireAccessToken = function (req, res, next) {
+/**
+ * Require access token to access API.
+ *
+ * @param req
+ * @param res
+ * @param next
+ */
+const requireAccessToken = (req, res, next) => {
   if (req.access_token) {
     next();
   } else {
@@ -99,8 +106,16 @@ const requireAccessToken = function (req, res, next) {
   }
 };
 
+/**
+ * Words list.
+ *
+ * @type {*[]}
+ */
 const savedWords = [];
 
+/**
+ * Route HTTP GET request to read a word and its position from the words list.
+ */
 app.get('/words', getAccessToken, requireAccessToken, (req, res) => {
   if (__.contains(req.access_token.scope.split(' '), 'read')) {
     const position = savedWords.indexOf(req.query.word);
@@ -115,6 +130,9 @@ app.get('/words', getAccessToken, requireAccessToken, (req, res) => {
   }
 });
 
+/**
+ * Route HTTP POST request to write a word and its position from the words list.
+ */
 app.post('/words', getAccessToken, requireAccessToken, (req, res) => {
   if (__.contains(req.access_token.scope.split(' '), 'write')) {
     if (req.body.word) {
@@ -131,6 +149,9 @@ app.post('/words', getAccessToken, requireAccessToken, (req, res) => {
   }
 });
 
+/**
+ * Route HTTP DELETE request to read a word and its position from the words list.
+ */
 app.delete('/words', getAccessToken, requireAccessToken, (req, res) => {
   if (__.contains(req.access_token.scope.split(' '), 'delete')) {
     const position = savedWords.indexOf(req.query.word);
