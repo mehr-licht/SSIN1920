@@ -296,11 +296,6 @@ const decodeClientCredentials = (auth) => {
   return { id: clientId, secret: clientSecret };
 };
 
-const getScopesFromForm = function (body) {
-  return __.filter(__.keys(body), (s) => __.string.startsWith(s, 'scope_'))
-    .map((s) => s.slice('scope_'.length));
-};
-
 app.use('/', express.static('files/authorizationServer'));
 
 tokenDb.remove({}, { multi: true });
